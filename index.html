@@ -745,7 +745,7 @@
     // ============================================
     // 設定 - GASデプロイ後にURLを設定してください
     // ============================================
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbzD8hdjQ2RsZvm58It6JQxv8GNRINqMlYS31FwmHKxq5m6OW8i6siPjr2oMQ_kMig6jpA/exec';
+    const GAS_URL = 'YOUR_GAS_WEB_APP_URL_HERE';
     
     // State
     let isRecording = false;
@@ -926,14 +926,19 @@
       try {
         const response = await fetch(GAS_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             action: 'generate',
             transcript: transcript
           })
         });
 
-        const result = await response.json();
+        const text = await response.text();
+        let result;
+        try {
+          result = JSON.parse(text);
+        } catch (e) {
+          throw new Error('Invalid response');
+        }
         hideLoading();
 
         if (result.success && result.data && result.data.record) {
@@ -976,7 +981,6 @@
       try {
         const response = await fetch(GAS_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             action: 'save',
             date: visitDate,
@@ -987,7 +991,13 @@
           })
         });
 
-        const result = await response.json();
+        const text = await response.text();
+        let result;
+        try {
+          result = JSON.parse(text);
+        } catch (e) {
+          throw new Error('Invalid response');
+        }
         hideLoading();
 
         if (result.success) {
