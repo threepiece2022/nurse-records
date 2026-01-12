@@ -745,7 +745,7 @@
     // ============================================
     // 設定 - GASデプロイ後にURLを設定してください
     // ============================================
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbx4PPYJhBLv4sVk3QV93vOEHgrTEM5lOhwW--gNotnbhRr6e3bPHxxQmaY1c6py6qAa4Q/exec';
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbzD8hdjQ2RsZvm58It6JQxv8GNRINqMlYS31FwmHKxq5m6OW8i6siPjr2oMQ_kMig6jpA/exec';
     
     // State
     let isRecording = false;
@@ -824,27 +824,38 @@
 
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
       recognition.lang = 'ja-JP';
+      
+      // Android判定
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      
+      // Androidは途中経過を無効化して重複を防ぐ
+      recognition.continuous = true;
+      recognition.interimResults = !isAndroid;
 
-      currentTranscript = document.getElementById('transcript').value;
+      // 録音開始時点のテキストを保存
+      const baseTranscript = document.getElementById('transcript').value;
+      let confirmedTranscript = '';
+      let lastResultIndex = 0;
 
       recognition.onresult = function(event) {
         let interimTranscript = '';
-        let finalTranscript = currentTranscript;
         
-        for (let i = event.resultIndex; i < event.results.length; i++) {
+        // 新しい結果のみを処理（重複防止）
+        for (let i = lastResultIndex; i < event.results.length; i++) {
           const result = event.results[i];
           if (result.isFinal) {
-            finalTranscript += result[0].transcript;
-            currentTranscript = finalTranscript;
-          } else {
-            interimTranscript += result[0].transcript;
+            confirmedTranscript += result[0].transcript;
+            lastResultIndex = i + 1;
+          } else if (!isAndroid) {
+            // iOS/PCのみ途中経過を表示
+            interimTranscript = result[0].transcript;
           }
         }
         
-        document.getElementById('transcript').value = finalTranscript + interimTranscript;
+        // 確定テキスト + 途中経過を表示
+        document.getElementById('transcript').value = baseTranscript + confirmedTranscript + interimTranscript;
+        currentTranscript = baseTranscript + confirmedTranscript;
         updateGenerateButton();
       };
 
@@ -1034,13 +1045,13 @@
       return date.getFullYear() + '年' + (date.getMonth() + 1) + '月' + date.getDate() + '日';
     }
 
- function copyToClipboard() {
-  const record = document.getElementById('editableRecord').value;
-  
-  navigator.clipboard.writeText(record).then(function() {
-    showToast('コピーしました');
-  });
-}
+    function copyToClipboard() {
+      const record = document.getElementById('editableRecord').value;
+      
+      navigator.clipboard.writeText(record).then(function() {
+        showToast('コピーしました');
+      });
+    }
 
     function goBack() {
       document.getElementById('step-input').classList.remove('hidden');
