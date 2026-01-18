@@ -9,502 +9,82 @@
   <title>訪問看護記録</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    * {
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-    }
-    
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: 'Noto Sans JP', 'Hiragino Sans', sans-serif;
-      background: linear-gradient(135deg, #f0f7f4 0%, #e8f4f0 50%, #f5f9f7 100%);
-      min-height: 100vh;
-      min-height: -webkit-fill-available;
-    }
-    
-    html {
-      height: -webkit-fill-available;
-    }
-    
-    .container {
-      max-width: 720px;
-      margin: 0 auto;
-      padding: 20px;
-      padding-bottom: 40px;
-    }
-    
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.05); opacity: 0.9; }
-    }
-    
-    @keyframes ripple {
-      0% { transform: scale(0.8); opacity: 1; }
-      100% { transform: scale(2.5); opacity: 0; }
-    }
-    
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    
-    @keyframes shimmer {
-      0% { background-position: -200% 0; }
-      100% { background-position: 200% 0; }
-    }
-    
-    @keyframes checkmark {
-      0% { transform: scale(0); }
-      50% { transform: scale(1.2); }
-      100% { transform: scale(1); }
-    }
-    
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    
-    .header {
-      text-align: center;
-      margin-bottom: 24px;
-      padding-top: 10px;
-    }
-    
-    .header h1 {
-      font-size: 24px;
-      font-weight: 700;
-      color: #1a2e28;
-      margin: 0 0 6px 0;
-    }
-    
-    .header p {
-      font-size: 13px;
-      color: #6b7c74;
-      margin: 0;
-    }
-    
-    .card {
-      background: white;
-      border-radius: 20px;
-      box-shadow: 0 4px 24px rgba(0, 80, 60, 0.08);
-      padding: 24px;
-      margin-bottom: 16px;
-      animation: fadeIn 0.4s ease-out;
-    }
-    
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
-      background: #e8f4f0;
-      color: #00816a;
-      border-radius: 20px;
-      font-size: 13px;
-      font-weight: 500;
-      margin-bottom: 16px;
-    }
-    
-    .input-group {
-      margin-bottom: 14px;
-    }
-    
-    .input-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-    
-    @media (max-width: 500px) {
-      .input-row {
-        grid-template-columns: 1fr;
-      }
-    }
-    
-    .input-label {
-      display: block;
-      font-size: 13px;
-      font-weight: 600;
-      color: #3d4f46;
-      margin-bottom: 6px;
-    }
-    
-    .input-field {
-      width: 100%;
-      padding: 12px 14px;
-      border: 2px solid #e5ebe8;
-      border-radius: 10px;
-      font-size: 16px;
-      transition: border-color 0.2s;
-      font-family: inherit;
-      -webkit-appearance: none;
-      background: white;
-    }
-    
-    .input-field:focus {
-      outline: none;
-      border-color: #00a67d;
-    }
-    
-    .input-field.error {
-      border-color: #ef4444;
-    }
-    
-    .input-hint {
-      font-size: 11px;
-      color: #8a9a92;
-      margin-top: 4px;
-    }
-    
-    .input-error {
-      font-size: 11px;
-      color: #ef4444;
-      margin-top: 4px;
-    }
-    
-    .record-section {
-      text-align: center;
-      padding: 20px 0;
-    }
-    
-    .record-btn {
-      width: 130px;
-      height: 130px;
-      border-radius: 50%;
-      border: none;
-      cursor: pointer;
-      position: relative;
-      transition: all 0.3s ease;
-      display: inline-flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      margin-bottom: 12px;
-      background: linear-gradient(145deg, #00a67d, #008f6b);
-      box-shadow: 0 8px 32px rgba(0, 166, 125, 0.35);
-    }
-    
-    .record-btn:active {
-      transform: scale(0.96);
-    }
-    
-    .record-btn.recording {
-      background: linear-gradient(145deg, #ef4444, #dc2626);
-      box-shadow: 0 8px 32px rgba(239, 68, 68, 0.4);
-      animation: pulse 1.5s ease-in-out infinite;
-    }
-    
-    .ripple-effect {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      border: 3px solid rgba(239, 68, 68, 0.6);
-      animation: ripple 1.5s ease-out infinite;
-    }
-    
-    .mic-icon {
-      width: 44px;
-      height: 44px;
-      fill: white;
-    }
-    
-    .btn-text {
-      color: white;
-      font-size: 13px;
-      font-weight: 600;
-    }
-    
-    .timer {
-      font-size: 12px;
-      color: rgba(255,255,255,0.9);
-      font-weight: 500;
-    }
-    
-    .record-hint {
-      font-size: 12px;
-      color: #8a9a92;
-      margin: 0;
-    }
-    
-    .section-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: #3d4f46;
-      margin-bottom: 10px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    
-    .textarea {
-      width: 100%;
-      min-height: 120px;
-      padding: 14px;
-      border: 2px solid #e5ebe8;
-      border-radius: 12px;
-      font-size: 15px;
-      line-height: 1.6;
-      resize: vertical;
-      transition: border-color 0.2s;
-      font-family: inherit;
-    }
-    
-    .textarea:focus {
-      outline: none;
-      border-color: #00a67d;
-    }
-    
-    .editable-record {
-      width: 100%;
-      min-height: 180px;
-      padding: 16px;
-      border: 2px solid #d4e5dd;
-      border-radius: 12px;
-      font-size: 14px;
-      line-height: 1.7;
-      font-family: inherit;
-      background: linear-gradient(145deg, #f8faf9, #f0f5f3);
-      resize: vertical;
-    }
-    
-    .editable-record:focus {
-      outline: none;
-      border-color: #00a67d;
-      background: white;
-    }
-    
-    .result-box {
-      background: linear-gradient(145deg, #f8faf9, #f0f5f3);
-      border: 2px solid #d4e5dd;
-      border-radius: 12px;
-      padding: 16px;
-      font-size: 14px;
-      line-height: 1.7;
-      white-space: pre-wrap;
-      color: #2d3b35;
-      margin-bottom: 16px;
-    }
-    
-    .button-group {
-      display: flex;
-      gap: 10px;
-      margin-top: 14px;
-      flex-wrap: wrap;
-    }
-    
-    .action-btn {
-      padding: 12px 20px;
-      border-radius: 10px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-      border: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-family: inherit;
-    }
-    
-    .primary-btn {
-      background: linear-gradient(145deg, #00a67d, #008f6b);
-      color: white;
-      box-shadow: 0 4px 16px rgba(0, 166, 125, 0.25);
-    }
-    
-    .primary-btn:active {
-      transform: scale(0.98);
-    }
-    
-    .primary-btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-    
-    .secondary-btn {
-      background: #f3f7f5;
-      color: #4a5a52;
-      border: 2px solid #e5ebe8;
-    }
-    
-    .secondary-btn:active {
-      background: #e8f0ec;
-    }
-    
-    .error-box {
-      background: #fef2f2;
-      border: 2px solid #fecaca;
-      color: #b91c1c;
-      padding: 12px 16px;
-      border-radius: 10px;
-      font-size: 13px;
-      margin-bottom: 14px;
-    }
-    
-    .review-header {
-      background: linear-gradient(145deg, #fef3c7, #fde68a);
-      border: 2px solid #f59e0b;
-      border-radius: 12px;
-      padding: 14px 16px;
-      margin-bottom: 16px;
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-    }
-    
-    .review-header-icon {
-      flex-shrink: 0;
-      margin-top: 2px;
-    }
-    
-    .review-header-title {
-      font-weight: 600;
-      color: #92400e;
-      font-size: 14px;
-    }
-    
-    .review-header-desc {
-      font-size: 12px;
-      color: #a16207;
-      margin-top: 2px;
-    }
-    
-    .success-header {
-      background: linear-gradient(145deg, #d1fae5, #a7f3d0);
-      border: 2px solid #10b981;
-      border-radius: 12px;
-      padding: 14px 16px;
-      margin-bottom: 16px;
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-    }
-    
-    .success-header-icon {
-      flex-shrink: 0;
-      animation: checkmark 0.5s ease-out;
-    }
-    
-    .success-header-title {
-      font-weight: 600;
-      color: #065f46;
-      font-size: 15px;
-    }
-    
-    .success-header-desc {
-      font-size: 12px;
-      color: #047857;
-      margin-top: 2px;
-    }
-    
-    .info-row {
-      display: flex;
-      gap: 16px;
-      padding: 10px 14px;
-      background: #f8faf9;
-      border-radius: 8px;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
-    }
-    
-    .info-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 13px;
-      color: #4a5a52;
-    }
-    
-    .info-label {
-      font-weight: 600;
-      color: #3d4f46;
-    }
-    
-    .loading-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(255,255,255,0.9);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
-    
-    .loading-spinner {
-      width: 50px;
-      height: 50px;
-      border: 4px solid #e5ebe8;
-      border-top-color: #00a67d;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-bottom: 16px;
-    }
-    
-    .loading-text {
-      font-size: 15px;
-      color: #3d4f46;
-      font-weight: 500;
-    }
-    
-    .guide-box {
-      background: rgba(255,255,255,0.6);
-      border-radius: 14px;
-      padding: 16px;
-      margin-top: 8px;
-    }
-    
-    .guide-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: #3d4f46;
-      margin-bottom: 10px;
-    }
-    
-    .guide-list {
-      margin: 0;
-      padding-left: 18px;
-      font-size: 12px;
-      color: #5a6b62;
-      line-height: 1.7;
-    }
-    
-    .hidden {
-      display: none !important;
-    }
-    
-    .toast {
-      position: fixed;
-      bottom: 30px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #1a2e28;
-      color: white;
-      padding: 12px 24px;
-      border-radius: 10px;
-      font-size: 14px;
-      z-index: 1001;
-      animation: fadeIn 0.3s ease-out;
-    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { margin: 0; padding: 0; font-family: 'Noto Sans JP', 'Hiragino Sans', sans-serif; background: linear-gradient(135deg, #f0f7f4 0%, #e8f4f0 50%, #f5f9f7 100%); min-height: 100vh; }
+    html { height: -webkit-fill-available; }
+    .container { max-width: 720px; margin: 0 auto; padding: 20px; padding-bottom: 40px; }
+    @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.05); opacity: 0.9; } }
+    @keyframes ripple { 0% { transform: scale(0.8); opacity: 1; } 100% { transform: scale(2.5); opacity: 0; } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes checkmark { 0% { transform: scale(0); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .header { text-align: center; margin-bottom: 24px; padding-top: 10px; }
+    .header h1 { font-size: 24px; font-weight: 700; color: #1a2e28; margin: 0 0 6px 0; }
+    .header p { font-size: 13px; color: #6b7c74; margin: 0; }
+    .card { background: white; border-radius: 20px; box-shadow: 0 4px 24px rgba(0, 80, 60, 0.08); padding: 24px; margin-bottom: 16px; animation: fadeIn 0.4s ease-out; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: #e8f4f0; color: #00816a; border-radius: 20px; font-size: 13px; font-weight: 500; margin-bottom: 16px; }
+    .input-group { margin-bottom: 14px; }
+    .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 500px) { .input-row { grid-template-columns: 1fr; } }
+    .input-label { display: block; font-size: 13px; font-weight: 600; color: #3d4f46; margin-bottom: 6px; }
+    .input-field { width: 100%; padding: 12px 14px; border: 2px solid #e5ebe8; border-radius: 10px; font-size: 16px; transition: border-color 0.2s; font-family: inherit; -webkit-appearance: none; background: white; }
+    .input-field:focus { outline: none; border-color: #00a67d; }
+    .input-field.error { border-color: #ef4444; }
+    .input-field:disabled { background: #f5f5f5; color: #999; }
+    .input-hint { font-size: 11px; color: #8a9a92; margin-top: 4px; }
+    .input-error { font-size: 11px; color: #ef4444; margin-top: 4px; }
+    .record-section { text-align: center; padding: 20px 0; }
+    .record-btn { width: 130px; height: 130px; border-radius: 50%; border: none; cursor: pointer; position: relative; transition: all 0.3s ease; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; margin-bottom: 12px; background: linear-gradient(145deg, #00a67d, #008f6b); box-shadow: 0 8px 32px rgba(0, 166, 125, 0.35); }
+    .record-btn:active { transform: scale(0.96); }
+    .record-btn.recording { background: linear-gradient(145deg, #ef4444, #dc2626); box-shadow: 0 8px 32px rgba(239, 68, 68, 0.4); animation: pulse 1.5s ease-in-out infinite; }
+    .ripple-effect { position: absolute; width: 100%; height: 100%; border-radius: 50%; border: 3px solid rgba(239, 68, 68, 0.6); animation: ripple 1.5s ease-out infinite; }
+    .mic-icon { width: 44px; height: 44px; fill: white; }
+    .btn-text { color: white; font-size: 13px; font-weight: 600; }
+    .timer { font-size: 12px; color: rgba(255,255,255,0.9); font-weight: 500; }
+    .record-hint { font-size: 12px; color: #8a9a92; margin: 0; }
+    .section-title { font-size: 14px; font-weight: 600; color: #3d4f46; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+    .textarea { width: 100%; min-height: 120px; padding: 14px; border: 2px solid #e5ebe8; border-radius: 12px; font-size: 15px; line-height: 1.6; resize: vertical; transition: border-color 0.2s; font-family: inherit; }
+    .textarea:focus { outline: none; border-color: #00a67d; }
+    .editable-record { width: 100%; min-height: 180px; padding: 16px; border: 2px solid #d4e5dd; border-radius: 12px; font-size: 14px; line-height: 1.7; font-family: inherit; background: linear-gradient(145deg, #f8faf9, #f0f5f3); resize: vertical; }
+    .editable-record:focus { outline: none; border-color: #00a67d; background: white; }
+    .result-box { background: linear-gradient(145deg, #f8faf9, #f0f5f3); border: 2px solid #d4e5dd; border-radius: 12px; padding: 16px; font-size: 14px; line-height: 1.7; white-space: pre-wrap; color: #2d3b35; margin-bottom: 16px; }
+    .button-group { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+    .action-btn { padding: 12px 20px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; display: inline-flex; align-items: center; gap: 6px; font-family: inherit; }
+    .primary-btn { background: linear-gradient(145deg, #00a67d, #008f6b); color: white; box-shadow: 0 4px 16px rgba(0, 166, 125, 0.25); }
+    .primary-btn:active { transform: scale(0.98); }
+    .primary-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .secondary-btn { background: #f3f7f5; color: #4a5a52; border: 2px solid #e5ebe8; }
+    .secondary-btn:active { background: #e8f0ec; }
+    .error-box { background: #fef2f2; border: 2px solid #fecaca; color: #b91c1c; padding: 12px 16px; border-radius: 10px; font-size: 13px; margin-bottom: 14px; }
+    .review-header { background: linear-gradient(145deg, #fef3c7, #fde68a); border: 2px solid #f59e0b; border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; display: flex; align-items: flex-start; gap: 10px; }
+    .review-header-icon { flex-shrink: 0; margin-top: 2px; }
+    .review-header-title { font-weight: 600; color: #92400e; font-size: 14px; }
+    .review-header-desc { font-size: 12px; color: #a16207; margin-top: 2px; }
+    .success-header { background: linear-gradient(145deg, #d1fae5, #a7f3d0); border: 2px solid #10b981; border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; display: flex; align-items: flex-start; gap: 10px; }
+    .success-header-icon { flex-shrink: 0; animation: checkmark 0.5s ease-out; }
+    .success-header-title { font-weight: 600; color: #065f46; font-size: 15px; }
+    .success-header-desc { font-size: 12px; color: #047857; margin-top: 2px; }
+    .info-row { display: flex; gap: 16px; padding: 10px 14px; background: #f8faf9; border-radius: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+    .info-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #4a5a52; }
+    .info-label { font-weight: 600; color: #3d4f46; }
+    .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+    .loading-spinner { width: 50px; height: 50px; border: 4px solid #e5ebe8; border-top-color: #00a67d; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px; }
+    .loading-text { font-size: 15px; color: #3d4f46; font-weight: 500; }
+    .guide-box { background: rgba(255,255,255,0.6); border-radius: 14px; padding: 16px; margin-top: 8px; }
+    .guide-title { font-size: 13px; font-weight: 600; color: #3d4f46; margin-bottom: 10px; }
+    .guide-list { margin: 0; padding-left: 18px; font-size: 12px; color: #5a6b62; line-height: 1.7; }
+    .hidden { display: none !important; }
+    .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1a2e28; color: white; padding: 12px 24px; border-radius: 10px; font-size: 14px; z-index: 1001; animation: fadeIn 0.3s ease-out; }
   </style>
 </head>
 <body>
   <div class="container">
-    <!-- Header -->
     <div class="header">
       <h1>📋 訪問看護記録</h1>
       <p>音声入力でかんたん記録作成</p>
     </div>
 
-    <!-- Step: Input -->
     <div id="step-input">
-      <!-- Patient Info -->
       <div class="card">
         <div class="badge">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -540,12 +120,14 @@
           
           <div class="input-group">
             <label class="input-label">記録者</label>
-            <input type="text" id="recorderName" class="input-field" placeholder="記録者名">
+            <select id="recorderName" class="input-field" disabled>
+              <option value="">先に職種を選択</option>
+            </select>
+            <div class="input-hint">職種を選択すると記録者を選べます</div>
           </div>
         </div>
       </div>
 
-      <!-- Recording -->
       <div class="card">
         <div class="record-section">
           <button id="recordBtn" class="record-btn" onclick="toggleRecording()">
@@ -567,7 +149,6 @@
         </div>
       </div>
 
-      <!-- Transcript -->
       <div class="card">
         <div class="section-title">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00a67d" stroke-width="2">
@@ -609,7 +190,6 @@
       </div>
     </div>
 
-    <!-- Step: Review -->
     <div id="step-review" class="hidden">
       <div class="card">
         <div class="review-header">
@@ -625,22 +205,10 @@
         </div>
 
         <div class="info-row">
-          <div class="info-item">
-            <span class="info-label">訪問日:</span>
-            <span id="reviewDate"></span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">利用者:</span>
-            <span id="reviewPatient"></span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">職種:</span>
-            <span id="reviewJobType"></span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">記録者:</span>
-            <span id="reviewRecorder"></span>
-          </div>
+          <div class="info-item"><span class="info-label">訪問日:</span><span id="reviewDate"></span></div>
+          <div class="info-item"><span class="info-label">利用者:</span><span id="reviewPatient"></span></div>
+          <div class="info-item"><span class="info-label">職種:</span><span id="reviewJobType"></span></div>
+          <div class="info-item"><span class="info-label">記録者:</span><span id="reviewRecorder"></span></div>
         </div>
 
         <div id="reviewError" class="error-box hidden"></div>
@@ -684,7 +252,6 @@
       </div>
     </div>
 
-    <!-- Step: Saved -->
     <div id="step-saved" class="hidden">
       <div class="card">
         <div class="success-header">
@@ -699,22 +266,10 @@
         </div>
 
         <div class="info-row">
-          <div class="info-item">
-            <span class="info-label">訪問日:</span>
-            <span id="savedDate"></span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">利用者:</span>
-            <span id="savedPatient"></span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">職種:</span>
-            <span id="savedJobType"></span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">記録者:</span>
-            <span id="savedRecorder"></span>
-          </div>
+          <div class="info-item"><span class="info-label">訪問日:</span><span id="savedDate"></span></div>
+          <div class="info-item"><span class="info-label">利用者:</span><span id="savedPatient"></span></div>
+          <div class="info-item"><span class="info-label">職種:</span><span id="savedJobType"></span></div>
+          <div class="info-item"><span class="info-label">記録者:</span><span id="savedRecorder"></span></div>
         </div>
 
         <div id="savedRecord" class="result-box"></div>
@@ -732,38 +287,97 @@
     </div>
   </div>
 
-  <!-- Loading Overlay -->
   <div id="loadingOverlay" class="loading-overlay hidden">
     <div class="loading-spinner"></div>
     <div id="loadingText" class="loading-text">記録を生成中...</div>
   </div>
 
-  <!-- Toast -->
   <div id="toast" class="toast hidden"></div>
 
   <script>
     // ============================================
     // 設定 - GASデプロイ後にURLを設定してください
     // ============================================
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycby5_Plu8xsg1jX1iNossdWa4zDAcyeKyIb2EjQqs2WtxZkCfX0XPA-n1IK8mPMBcQxg5A/exec';
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbyvR9DGB4NWoXlMOrXcVxXctKI6BJDZk11RFsF1Xf4bVUtCsKS4_m7T-qDw_2AhZ1c22A/exec';
     
-    // State
     let isRecording = false;
     let recognition = null;
     let recordingTimer = null;
     let recordingSeconds = 0;
     let currentTranscript = '';
+    let staffList = [];
 
-    // Initialize
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', async function() {
       const today = new Date().toISOString().split('T')[0];
       document.getElementById('visitDate').value = today;
       
       document.getElementById('patientName').addEventListener('input', validatePatientName);
       document.getElementById('transcript').addEventListener('input', updateGenerateButton);
-      document.getElementById('jobType').addEventListener('change', updateGenerateButton);
-      document.getElementById('recorderName').addEventListener('input', updateGenerateButton);
+      document.getElementById('jobType').addEventListener('change', onJobTypeChange);
+      document.getElementById('recorderName').addEventListener('change', updateGenerateButton);
+      
+      // 従業員リストを読み込み
+      await loadStaffList();
     });
+
+    // 従業員リストを取得
+    async function loadStaffList() {
+      if (GAS_URL === 'YOUR_GAS_WEB_APP_URL_HERE') {
+        console.log('GAS_URL not configured');
+        return;
+      }
+      
+      try {
+        const response = await fetch(GAS_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'getStaff' })
+        });
+        const text = await response.text();
+        const result = JSON.parse(text);
+        
+        if (result.success && result.data && result.data.staff) {
+          staffList = result.data.staff;
+          console.log('従業員リスト読み込み完了:', staffList.length + '名');
+        }
+      } catch (err) {
+        console.error('従業員リスト取得エラー:', err);
+      }
+    }
+
+    // 職種変更時の処理
+    function onJobTypeChange() {
+      const jobType = document.getElementById('jobType').value;
+      const recorderSelect = document.getElementById('recorderName');
+      
+      // 記録者リストをクリア
+      recorderSelect.innerHTML = '';
+      
+      if (!jobType) {
+        recorderSelect.innerHTML = '<option value="">先に職種を選択</option>';
+        recorderSelect.disabled = true;
+        updateGenerateButton();
+        return;
+      }
+      
+      // 選択された職種の従業員をフィルタ
+      const filteredStaff = staffList.filter(s => s.jobType === jobType);
+      
+      if (filteredStaff.length === 0) {
+        recorderSelect.innerHTML = '<option value="">該当する従業員がいません</option>';
+        recorderSelect.disabled = true;
+      } else {
+        recorderSelect.innerHTML = '<option value="">選択してください</option>';
+        filteredStaff.forEach(staff => {
+          const option = document.createElement('option');
+          option.value = staff.name;
+          option.textContent = staff.name;
+          recorderSelect.appendChild(option);
+        });
+        recorderSelect.disabled = false;
+      }
+      
+      updateGenerateButton();
+    }
 
     function validatePatientName() {
       const input = document.getElementById('patientName');
@@ -771,14 +385,12 @@
       const error = document.getElementById('patientNameError');
       let value = input.value;
       
-      // スペース（全角・半角）を自動削除
       const cleanedValue = value.replace(/[\s　]/g, '');
       if (value !== cleanedValue) {
         input.value = cleanedValue;
         value = cleanedValue;
       }
       
-      // カタカナのみ（スペースなし）
       const katakanaRegex = /^[ァ-ヶー]*$/;
       
       if (value && !katakanaRegex.test(value)) {
@@ -801,7 +413,7 @@
       const transcript = document.getElementById('transcript').value.trim();
       const patientName = document.getElementById('patientName').value.trim();
       const jobType = document.getElementById('jobType').value;
-      const recorderName = document.getElementById('recorderName').value.trim();
+      const recorderName = document.getElementById('recorderName').value;
       const katakanaRegex = /^[ァ-ヶー]*$/;
       const btn = document.getElementById('generateBtn');
       
@@ -826,14 +438,10 @@
       recognition = new SpeechRecognition();
       recognition.lang = 'ja-JP';
       
-      // Android判定
       const isAndroid = /Android/i.test(navigator.userAgent);
-      
-      // Androidは途中経過を無効化して重複を防ぐ
       recognition.continuous = true;
       recognition.interimResults = !isAndroid;
 
-      // 録音開始時点のテキストを保存
       const baseTranscript = document.getElementById('transcript').value;
       let confirmedTranscript = '';
       let lastResultIndex = 0;
@@ -841,19 +449,16 @@
       recognition.onresult = function(event) {
         let interimTranscript = '';
         
-        // 新しい結果のみを処理（重複防止）
         for (let i = lastResultIndex; i < event.results.length; i++) {
           const result = event.results[i];
           if (result.isFinal) {
             confirmedTranscript += result[0].transcript;
             lastResultIndex = i + 1;
           } else if (!isAndroid) {
-            // iOS/PCのみ途中経過を表示
             interimTranscript = result[0].transcript;
           }
         }
         
-        // 確定テキスト + 途中経過を表示
         document.getElementById('transcript').value = baseTranscript + confirmedTranscript + interimTranscript;
         currentTranscript = baseTranscript + confirmedTranscript;
         updateGenerateButton();
@@ -921,6 +526,7 @@
     async function generateRecord() {
       const transcript = document.getElementById('transcript').value.trim();
       const patientName = document.getElementById('patientName').value.trim();
+      const jobType = document.getElementById('jobType').value;
 
       if (!transcript || !patientName || !validatePatientName()) {
         return;
@@ -939,7 +545,8 @@
           method: 'POST',
           body: JSON.stringify({
             action: 'generate',
-            transcript: transcript
+            transcript: transcript,
+            jobType: jobType
           })
         });
 
@@ -1047,7 +654,6 @@
 
     function copyToClipboard() {
       const record = document.getElementById('editableRecord').value;
-      
       navigator.clipboard.writeText(record).then(function() {
         showToast('コピーしました');
       });
@@ -1064,7 +670,8 @@
       document.getElementById('transcript').value = '';
       document.getElementById('editableRecord').value = '';
       document.getElementById('jobType').value = '';
-      document.getElementById('recorderName').value = '';
+      document.getElementById('recorderName').innerHTML = '<option value="">先に職種を選択</option>';
+      document.getElementById('recorderName').disabled = true;
       
       const today = new Date().toISOString().split('T')[0];
       document.getElementById('visitDate').value = today;
