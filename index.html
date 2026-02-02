@@ -298,13 +298,13 @@
     // ============================================
     // 設定 - GASデプロイ後にURLを設定してください
     // ============================================
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbyvR9DGB4NWoXlMOrXcVxXctKI6BJDZk11RFsF1Xf4bVUtCsKS4_m7T-qDw_2AhZ1c22A/exec';
+    const GAS_URL = 'YOUR_GAS_WEB_APP_URL_HERE';
     
     let isRecording = false;
     let recognition = null;
     let recordingTimer = null;
     let recordingSeconds = 0;
-    let currentTranscript = '';
+    let accumulatedTranscript = '';
     let staffList = [];
 
     document.addEventListener('DOMContentLoaded', async function() {
@@ -434,49 +434,57 @@
         return;
       }
 
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognition = new SpeechRecognition();
-      recognition.lang = 'ja-JP';
-      
       const isAndroid = /Android/i.test(navigator.userAgent);
-      recognition.continuous = true;
-      recognition.interimResults = !isAndroid;
-
-      const baseTranscript = document.getElementById('transcript').value;
-      let confirmedTranscript = '';
-      let lastResultIndex = 0;
-
-      recognition.onresult = function(event) {
-        let interimTranscript = '';
+      
+      function createRecognition() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        var rec = new SpeechRecognition();
+        rec.lang = 'ja-JP';
+        rec.continuous = true;
+        rec.interimResults = !isAndroid;
         
-        for (let i = lastResultIndex; i < event.results.length; i++) {
-          const result = event.results[i];
-          if (result.isFinal) {
-            confirmedTranscript += result[0].transcript;
-            lastResultIndex = i + 1;
-          } else if (!isAndroid) {
-            interimTranscript = result[0].transcript;
+        var sessionTranscript = '';
+        var lastResultIndex = 0;
+
+        rec.onresult = function(event) {
+          var interimTranscript = '';
+          
+          for (var i = lastResultIndex; i < event.results.length; i++) {
+            var result = event.results[i];
+            if (result.isFinal) {
+              sessionTranscript += result[0].transcript;
+              lastResultIndex = i + 1;
+            } else if (!isAndroid) {
+              interimTranscript = result[0].transcript;
+            }
           }
-        }
+          
+          document.getElementById('transcript').value = accumulatedTranscript + sessionTranscript + interimTranscript;
+          updateGenerateButton();
+        };
+
+        rec.onerror = function(event) {
+          if (event.error === 'not-allowed') {
+            showError('マイクへのアクセスを許可してください');
+            stopRecording();
+          }
+          // no-speech等のエラーはonendで再起動するため無視
+        };
+
+        rec.onend = function() {
+          if (isRecording) {
+            // 現在までのテキストを確定してから再起動
+            accumulatedTranscript = document.getElementById('transcript').value;
+            recognition = createRecognition();
+            recognition.start();
+          }
+        };
         
-        document.getElementById('transcript').value = baseTranscript + confirmedTranscript + interimTranscript;
-        currentTranscript = baseTranscript + confirmedTranscript;
-        updateGenerateButton();
-      };
+        return rec;
+      }
 
-      recognition.onerror = function(event) {
-        if (event.error === 'not-allowed') {
-          showError('マイクへのアクセスを許可してください');
-        }
-        stopRecording();
-      };
-
-      recognition.onend = function() {
-        if (isRecording) {
-          recognition.start();
-        }
-      };
-
+      accumulatedTranscript = document.getElementById('transcript').value;
+      recognition = createRecognition();
       recognition.start();
       isRecording = true;
       recordingSeconds = 0;
