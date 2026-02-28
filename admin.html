@@ -647,23 +647,54 @@
       <!-- ========== REPORTS PAGE ========== -->
       <div class="page" id="reports-page">
         <div class="page-title">報告書</div>
+
+        <!-- 生成パネル -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-header">
+            <h2>報告書を生成</h2>
+          </div>
+          <div style="padding:16px 20px;">
+            <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+              <div class="filter-group">
+                <label>対象月</label>
+                <input type="month" id="reportTargetMonth" style="padding:8px 12px;">
+              </div>
+              <button class="btn btn-primary" onclick="startGenerateReports()" id="btnGenerate">生成開始</button>
+            </div>
+            <div id="generateProgress" style="display:none;margin-top:14px;">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                <div class="spinner" style="width:18px;height:18px;"></div>
+                <span id="generateProgressText" style="font-size:13px;color:var(--text-secondary);">生成中...</span>
+              </div>
+              <div class="progress-bar-bg" style="height:14px;">
+                <div class="progress-bar-fill in-hours" id="generateProgressBar" style="width:0%;transition:width 0.5s;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- フィルター -->
         <div class="filter-bar">
           <div class="filter-row">
             <div class="filter-group">
-              <label>記録者で絞り込み</label>
+              <label>記録者</label>
               <select id="reportFilterRecorder" onchange="filterReports()">
                 <option value="">全スタッフ</option>
               </select>
             </div>
+            <div class="filter-group">
+              <label>利用者</label>
+              <select id="reportFilterPatient" onchange="filterReports()">
+                <option value="">全利用者</option>
+              </select>
+            </div>
             <div class="filter-group" style="flex:0 0 auto;">
               <label>&nbsp;</label>
-              <button class="btn btn-secondary" onclick="document.getElementById('reportFilterRecorder').value='';filterReports();">リセット</button>
+              <button class="btn btn-secondary" onclick="resetReportFilters()">リセット</button>
             </div>
           </div>
         </div>
-        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">
-          報告書の生成はスプレッドシートの「報告書作成」メニューから実行してください。記録者で絞り込むと転記がスムーズです。
-        </p>
+
         <div id="reportsContainer">
           <div class="loading"><div class="spinner"></div>読み込み中...</div>
         </div>
@@ -1127,8 +1158,77 @@ async function loadBusinessHours() {
 }
 
 // ============================================
-// REPORTS (with recorder filter)
+// REPORTS (generate + dual filter + edit + save)
 // ============================================
+let generatePollTimer = null;
+
+// Set default month to last month
+(function initReportMonth() {
+  const now = new Date();
+  const last = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const y = last.getFullYear();
+  const m = String(last.getMonth() + 1).padStart(2, '0');
+  setTimeout(() => {
+    const el = document.getElementById('reportTargetMonth');
+    if (el) el.value = `${y}-${m}`;
+  }, 100);
+})();
+
+async function startGenerateReports() {
+  const monthInput = document.getElementById('reportTargetMonth').value;
+  if (!monthInput) { showToast('対象月を選択してください'); return; }
+  
+  const [y, m] = monthInput.split('-');
+  const targetMonth = y + '/' + m;
+  
+  if (!confirm(`${y}年${parseInt(m)}月の報告書を生成しますか？\n（既存の同月データは上書きされます）`)) return;
+  
+  document.getElementById('btnGenerate').disabled = true;
+  document.getElementById('btnGenerate').textContent = '生成中...';
+  document.getElementById('generateProgress').style.display = 'block';
+  document.getElementById('generateProgressText').textContent = '生成を開始しています...';
+  document.getElementById('generateProgressBar').style.width = '0%';
+  
+  try {
+    const res = await callAPI('admin_generate_reports', { targetMonth });
+    showToast(res.message + '（' + res.totalCount + '名）');
+    // ポーリング開始
+    generatePollTimer = setInterval(pollGenerateStatus, 5000);
+  } catch (err) {
+    showToast('エラー: ' + err.message);
+    resetGenerateUI();
+  }
+}
+
+async function pollGenerateStatus() {
+  try {
+    const res = await callAPI('admin_generate_status');
+    const pct = res.percent || 0;
+    document.getElementById('generateProgressBar').style.width = pct + '%';
+    document.getElementById('generateProgressText').textContent = 
+      `生成中... ${res.currentIndex}/${res.totalCount}名 (${pct}%) — 経過${res.elapsedMinutes}分`;
+    
+    if (!res.processing) {
+      clearInterval(generatePollTimer);
+      generatePollTimer = null;
+      document.getElementById('generateProgressText').textContent = '✅ 生成完了！';
+      resetGenerateUI();
+      // 報告書を再読み込み
+      setTimeout(() => loadReports(), 500);
+    }
+  } catch (err) {
+    clearInterval(generatePollTimer);
+    generatePollTimer = null;
+    resetGenerateUI();
+  }
+}
+
+function resetGenerateUI() {
+  document.getElementById('btnGenerate').disabled = false;
+  document.getElementById('btnGenerate').textContent = '生成開始';
+  setTimeout(() => { document.getElementById('generateProgress').style.display = 'none'; }, 3000);
+}
+
 async function loadReports() {
   const container = document.getElementById('reportsContainer');
   container.innerHTML = '<div class="loading"><div class="spinner"></div>読み込み中...</div>';
@@ -1137,21 +1237,29 @@ async function loadReports() {
     const data = await callAPI('admin_reports');
     cachedReportsData = data;
 
-    // 記録者リストをフィルタードロップダウンに反映
+    // フィルター選択肢を構築
     const recorders = new Set();
+    const patients = new Set();
     if (data.reports) {
       data.reports.forEach(report => {
         (report.entries || []).forEach(e => {
           if (e.recorder) recorders.add(e.recorder);
+          if (e.patient) patients.add(e.patient);
         });
       });
     }
-    const select = document.getElementById('reportFilterRecorder');
-    const currentVal = select.value;
-    select.innerHTML = '<option value="">全スタッフ</option>' +
-      [...recorders].sort().map(r => `<option value="${esc(r)}" ${r === currentVal ? 'selected' : ''}>${esc(r)}</option>`).join('');
+    
+    const recSelect = document.getElementById('reportFilterRecorder');
+    const curRec = recSelect.value;
+    recSelect.innerHTML = '<option value="">全スタッフ</option>' +
+      [...recorders].sort().map(r => `<option value="${esc(r)}" ${r === curRec ? 'selected' : ''}>${esc(r)}</option>`).join('');
 
-    renderReports(data, currentVal);
+    const patSelect = document.getElementById('reportFilterPatient');
+    const curPat = patSelect.value;
+    patSelect.innerHTML = '<option value="">全利用者</option>' +
+      [...patients].sort().map(p => `<option value="${esc(p)}" ${p === curPat ? 'selected' : ''}>${esc(p)}</option>`).join('');
+
+    renderReports(data, curRec, curPat);
   } catch (err) {
     container.innerHTML = `<div class="card"><div class="empty-state"><span class="empty-state-icon">⚠️</span>${esc(err.message)}</div></div>`;
   }
@@ -1160,48 +1268,55 @@ async function loadReports() {
 function filterReports() {
   if (!cachedReportsData) return;
   const recorder = document.getElementById('reportFilterRecorder').value;
-  renderReports(cachedReportsData, recorder);
+  const patient = document.getElementById('reportFilterPatient').value;
+  renderReports(cachedReportsData, recorder, patient);
 }
 
-function renderReports(data, filterRecorder) {
+function resetReportFilters() {
+  document.getElementById('reportFilterRecorder').value = '';
+  document.getElementById('reportFilterPatient').value = '';
+  filterReports();
+}
+
+function renderReports(data, filterRecorder, filterPatient) {
   const container = document.getElementById('reportsContainer');
 
   if (!data.reports || data.reports.length === 0) {
-    container.innerHTML = '<div class="card"><div class="empty-state"><span class="empty-state-icon">📊</span>生成済みの報告書がありません<br><small>スプレッドシートの「報告書作成」メニューから生成してください</small></div></div>';
+    container.innerHTML = '<div class="card"><div class="empty-state"><span class="empty-state-icon">📊</span>生成済みの報告書がありません<br><small>上の「報告書を生成」から対象月を指定して生成してください</small></div></div>';
     return;
   }
 
   let html = '';
 
   data.reports.forEach(report => {
-    // 記録者でフィルター
     let entries = report.entries || [];
-    if (filterRecorder) {
-      entries = entries.filter(e => e.recorder === filterRecorder);
-    }
+    if (filterRecorder) entries = entries.filter(e => e.recorder === filterRecorder);
+    if (filterPatient) entries = entries.filter(e => e.patient === filterPatient);
+    if (entries.length === 0) return;
 
-    if (entries.length === 0 && filterRecorder) return; // フィルター結果が空なら非表示
-
-    const countLabel = filterRecorder
-      ? `${esc(report.period)}（${entries.length}名 / ${esc(filterRecorder)}担当分）`
+    const filterLabels = [];
+    if (filterRecorder) filterLabels.push(filterRecorder + '担当');
+    if (filterPatient) filterLabels.push(filterPatient);
+    const countLabel = filterLabels.length > 0
+      ? `${esc(report.period)}（${entries.length}名 / ${filterLabels.join('・')}）`
       : `${esc(report.period)}（${report.userCount}名）`;
 
     html += `
       <div class="card" style="margin-bottom:16px;">
         <div class="card-header">
           <h2>${countLabel}</h2>
-          <button class="btn btn-secondary btn-sm" onclick="copyAllReports('${escJs(report.period)}', '${escJs(filterRecorder)}')">📋 一括コピー</button>
+          <button class="btn btn-secondary btn-sm" onclick="copyAllReports('${escJs(report.period)}', '${escJs(filterRecorder || '')}', '${escJs(filterPatient || '')}')">📋 一括コピー</button>
         </div>
         <table>
-          <thead><tr><th>利用者</th><th>訪問回数</th><th>経過</th><th>リハ</th><th>操作</th></tr></thead>
+          <thead><tr><th>利用者</th><th>回数</th><th>経過</th><th>リハ</th><th>操作</th></tr></thead>
           <tbody>${entries.map(e => `<tr>
             <td style="font-weight:500;">${esc(e.patient)}</td>
             <td>${e.visitCount}回</td>
             <td>${e.hasProgress ? '✅' : '—'}</td>
             <td>${e.hasRehab ? '✅' : '—'}</td>
-            <td>
-              ${e.hasProgress ? `<button class="btn btn-ghost btn-sm" onclick="showReportDetail('${escJs(e.patient)}', '${escJs(report.period)}', '病状の経過', \`${escJs(e.progress)}\`)">経過</button>` : ''}
-              ${e.hasRehab ? `<button class="btn btn-ghost btn-sm" onclick="showReportDetail('${escJs(e.patient)}', '${escJs(report.period)}', 'リハ別添', \`${escJs(e.rehabAddendum)}\`)">リハ</button>` : ''}
+            <td style="white-space:nowrap;">
+              ${e.hasProgress ? `<button class="btn btn-ghost btn-sm" onclick="openEditReport('${escJs(e.patient)}', '${escJs(report.sheetName)}', '${escJs(report.period)}', 'progress', \`${escJs(e.progress)}\`)">✏️ 経過</button>` : ''}
+              ${e.hasRehab ? `<button class="btn btn-ghost btn-sm" onclick="openEditReport('${escJs(e.patient)}', '${escJs(report.sheetName)}', '${escJs(report.period)}', 'rehabAddendum', \`${escJs(e.rehabAddendum)}\`)">✏️ リハ</button>` : ''}
               <button class="btn btn-secondary btn-sm" onclick="copyReportText('${escJs(e.patient)}', \`${escJs(e.progress)}\`, \`${escJs(e.rehabAddendum)}\`)">コピー</button>
             </td>
           </tr>`).join('')}</tbody>
@@ -1217,42 +1332,62 @@ function renderReports(data, filterRecorder) {
   container.innerHTML = html;
 }
 
-function copyAllReports(period, filterRecorder) {
+function openEditReport(patient, sheetName, period, field, content) {
+  const fieldLabel = field === 'progress' ? '病状の経過' : 'リハビリ別添';
+  document.getElementById('modalTitle').textContent = `${patient} - ${fieldLabel}（${period}）`;
+  document.getElementById('modalBody').innerHTML = `
+    <textarea id="editReportText" style="width:100%;min-height:250px;padding:12px;border:1px solid var(--border);border-radius:8px;font-size:13px;line-height:1.7;font-family:'Noto Sans JP',sans-serif;resize:vertical;">${esc(content)}</textarea>
+    <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-secondary btn-sm" onclick="copyText(document.getElementById('editReportText').value)">📋 コピー</button>
+      <button class="btn btn-primary btn-sm" onclick="saveReport('${escJs(patient)}', '${escJs(sheetName)}', '${escJs(field)}')">💾 保存</button>
+    </div>
+  `;
+  document.getElementById('modalOverlay').classList.add('active');
+}
+
+async function saveReport(patient, sheetName, field) {
+  const value = document.getElementById('editReportText').value;
+  try {
+    const res = await callAPI('admin_update_report', { sheetName, patient, field, value });
+    showToast(res.message || '保存しました');
+    closeModal();
+    // キャッシュも更新
+    if (cachedReportsData && cachedReportsData.reports) {
+      cachedReportsData.reports.forEach(report => {
+        if (report.sheetName === sheetName) {
+          report.entries.forEach(e => {
+            if (e.patient === patient) {
+              if (field === 'progress') { e.progress = value; e.hasProgress = !!value.trim(); }
+              if (field === 'rehabAddendum') { e.rehabAddendum = value; e.hasRehab = !!value.trim(); }
+            }
+          });
+        }
+      });
+      filterReports();
+    }
+  } catch (err) {
+    showToast('保存失敗: ' + err.message);
+  }
+}
+
+function copyAllReports(period, filterRecorder, filterPatient) {
   if (!cachedReportsData) return;
   const report = cachedReportsData.reports.find(r => r.period === period);
   if (!report) return;
 
   let entries = report.entries || [];
-  if (filterRecorder) {
-    entries = entries.filter(e => e.recorder === filterRecorder);
-  }
+  if (filterRecorder) entries = entries.filter(e => e.recorder === filterRecorder);
+  if (filterPatient) entries = entries.filter(e => e.patient === filterPatient);
 
   const lines = [];
   entries.forEach(e => {
     lines.push('【' + e.patient + '】');
     if (e.progress) lines.push(e.progress);
-    if (e.rehabAddendum) {
-      lines.push('');
-      lines.push('[リハビリ別添]');
-      lines.push(e.rehabAddendum);
-    }
-    lines.push('');
-    lines.push('---');
-    lines.push('');
+    if (e.rehabAddendum) { lines.push(''); lines.push('[リハビリ別添]'); lines.push(e.rehabAddendum); }
+    lines.push(''); lines.push('---'); lines.push('');
   });
 
   copyText(lines.join('\n'));
-}
-
-function showReportDetail(patient, period, type, content) {
-  document.getElementById('modalTitle').textContent = `${patient} - ${type}（${period}）`;
-  document.getElementById('modalBody').innerHTML = `
-    <div class="report-content">${esc(content)}</div>
-    <div style="margin-top:14px;">
-      <button class="btn btn-primary btn-sm" onclick="copyText(\`${escJs(content)}\`)">📋 コピー</button>
-    </div>
-  `;
-  document.getElementById('modalOverlay').classList.add('active');
 }
 
 function copyReportText(patient, progress, rehab) {
