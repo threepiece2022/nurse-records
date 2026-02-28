@@ -832,6 +832,7 @@ function handleLogin() {
   const pw = document.getElementById('loginPassword').value;
 
   if (id === APP_CONFIG.adminId && pw === APP_CONFIG.adminPassword) {
+    localStorage.setItem('nursing_admin_logged_in', 'true');
     document.getElementById('loginContainer').classList.add('hidden');
     document.getElementById('dashboard').classList.add('active');
     document.getElementById('headerOrgName').textContent = APP_CONFIG.orgName;
@@ -843,11 +844,22 @@ function handleLogin() {
 }
 
 function handleLogout() {
+  localStorage.removeItem('nursing_admin_logged_in');
   document.getElementById('loginContainer').classList.remove('hidden');
   document.getElementById('dashboard').classList.remove('active');
   document.getElementById('loginId').value = '';
   document.getElementById('loginPassword').value = '';
 }
+
+// 起動時にログイン状態を復元
+(function autoLogin() {
+  if (localStorage.getItem('nursing_admin_logged_in') === 'true') {
+    document.getElementById('loginContainer').classList.add('hidden');
+    document.getElementById('dashboard').classList.add('active');
+    document.getElementById('headerOrgName').textContent = APP_CONFIG.orgName;
+    loadDashboard();
+  }
+})();
 
 document.addEventListener('keypress', e => {
   if (e.key === 'Enter' && !document.getElementById('loginContainer').classList.contains('hidden')) {
