@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>訪問看護記録システム - 管理画面</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #0d9373;
+      --primary-light: #e6f5f0;
+      --primary-dark: #087a60;
+      --bg: #f0f2f5;
+      --surface: #ffffff;
+      --surface-hover: #f8f9fa;
+      --border: #e2e5e9;
+      --text: #1a1d21;
+      --text-secondary: #5f6670;
+      --text-muted: #9ea4ad;
+      --accent-blue: #2563eb;
+      --accent-blue-bg: #eff4ff;
+      --accent-amber: #d97706;
+      --accent-amber-bg: #fef9ee;
+      --accent-red: #dc2626;
+      --accent-red-bg: #fef2f2;
+      --accent-green: #16a34a;
+      --accent-green-bg: #f0fdf4;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.07);
+      --shadow-lg: 0 8px 30px rgba(0,0,0,0.1);
+      --radius: 10px;
+      --radius-lg: 14px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans JP', 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ===== LOGIN ===== */
+    .login-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(145deg, #064e3b 0%, #0d9373 50%, #065f46 100%);
+      position: relative;
+      overflow: hidden;
+    }
+    .login-container::before {
+      content: '';
+      position: absolute;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%);
+      top: -200px; right: -100px;
+    }
+    .login-container::after {
+      content: '';
+      position: absolute;
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%);
+      bottom: -100px; left: -50px;
+    }
+    .login-card {
+      background: var(--surface);
+      padding: 44px 40px;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+      width: 100%;
+      max-width: 420px;
+      position: relative;
+      z-index: 1;
+    }
+    .login-logo { text-align: center; margin-bottom: 32px; }
+    .login-logo-icon {
+      width: 56px; height: 56px;
+      background: var(--primary-light);
+      border-radius: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      margin-bottom: 16px;
+    }
+    .login-logo h1 { font-size: 22px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
+    .login-logo p { font-size: 14px; color: var(--text-secondary); margin-top: 6px; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 7px; }
+    .form-group input {
+      width: 100%; padding: 12px 16px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px; font-size: 15px;
+      font-family: inherit;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .form-group input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(13,147,115,0.12); }
+    .login-btn {
+      width: 100%; padding: 13px;
+      background: var(--primary);
+      color: white; border: none;
+      border-radius: 8px; font-size: 15px;
+      font-weight: 600; cursor: pointer;
+      font-family: inherit;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .login-btn:hover { background: var(--primary-dark); }
+    .login-btn:active { transform: scale(0.98); }
+    .login-error {
+      background: var(--accent-red-bg);
+      color: var(--accent-red);
+      padding: 11px 14px;
+      border-radius: 8px;
+      margin-bottom: 18px;
+      font-size: 13px;
+      display: none;
+      border: 1px solid #fecaca;
+    }
+    .login-hint { text-align: center; margin-top: 24px; font-size: 12px; color: var(--text-muted); }
+
+    /* ===== LAYOUT ===== */
+    .dashboard { display: none; }
+    .dashboard.active { display: flex; flex-direction: column; min-height: 100vh; }
+    .login-container.hidden { display: none; }
+
+    .header {
+      background: var(--surface);
+      padding: 0 24px;
+      height: 60px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky; top: 0; z-index: 100;
+      border-bottom: 1px solid var(--border);
+    }
+    .header-logo {
+      font-family: 'DM Sans', 'Noto Sans JP', sans-serif;
+      font-size: 17px; font-weight: 700; color: var(--primary);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .header-logo-mark {
+      width: 32px; height: 32px;
+      background: var(--primary);
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 16px;
+    }
+    .header-right { display: flex; align-items: center; gap: 16px; }
+    .header-org { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+    .logout-btn {
+      padding: 7px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .logout-btn:hover { background: var(--border); }
+
+    .layout { display: flex; flex: 1; }
+
+    .sidebar {
+      width: 220px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 16px 0;
+      position: sticky; top: 60px;
+      height: calc(100vh - 60px);
+      overflow-y: auto;
+    }
+    .sidebar-section { padding: 0 12px; margin-bottom: 6px; }
+    .sidebar-section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); padding: 8px 12px 4px; letter-spacing: 0.8px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px;
+      border-radius: 7px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 13.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: none; background: none; width: 100%; text-align: left;
+      font-family: inherit;
+    }
+    .nav-item:hover { background: var(--bg); color: var(--text); }
+    .nav-item.active { background: var(--primary-light); color: var(--primary); font-weight: 600; }
+    .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+    .main-content { flex: 1; padding: 24px; min-width: 0; }
+
+    /* ===== COMPONENTS ===== */
+    .page { display: none; }
+    .page.active { display: block; animation: fadeIn 0.2s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+    .page-title { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 20px; letter-spacing: -0.3px; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 22px; }
+    .stat-card {
+      background: var(--surface);
+      padding: 18px 20px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+      transition: box-shadow 0.2s;
+    }
+    .stat-card:hover { box-shadow: var(--shadow-md); }
+    .stat-card-label { font-size: 12px; color: var(--text-muted); font-weight: 500; margin-bottom: 8px; }
+    .stat-card-value { font-family: 'DM Sans', sans-serif; font-size: 28px; font-weight: 700; color: var(--text); line-height: 1; }
+    .stat-card-sub { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+    .stat-change-up { color: var(--accent-green); }
+    .stat-change-down { color: var(--accent-red); }
+
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .card + .card { margin-top: 16px; }
+    .card-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-header h2 { font-size: 14px; font-weight: 600; color: var(--text); }
+    .card-actions { display: flex; gap: 6px; }
+
+    .filter-bar {
+      background: var(--surface);
+      padding: 16px 20px;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+    .filter-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+    .filter-group { flex: 1; min-width: 130px; }
+    .filter-group label { display: block; font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .filter-group input, .filter-group select {
+      width: 100%; padding: 8px 10px;
+      border: 1.5px solid var(--border);
+      border-radius: 6px; font-size: 13px;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    .filter-group input:focus, .filter-group select:focus { outline: none; border-color: var(--primary); }
+
+    .btn {
+      padding: 8px 16px;
+      border: none; border-radius: 6px;
+      font-size: 13px; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+      transition: all 0.15s;
+      display: inline-flex; align-items: center; gap: 5px;
+      white-space: nowrap;
+    }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-secondary { background: var(--bg); color: var(--text-secondary); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: var(--border); }
+    .btn-sm { padding: 5px 11px; font-size: 12px; }
+    .btn-ghost { background: var(--primary-light); color: var(--primary); }
+    .btn-ghost:hover { background: #cceee4; }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: var(--bg); }
+    th {
+      padding: 10px 16px; text-align: left;
+      font-size: 11px; font-weight: 700;
+      color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    td {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      font-size: 13.5px;
+      color: var(--text);
+    }
+    tr:hover td { background: var(--surface-hover); }
+    .badge {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: 5px;
+      font-size: 11.5px;
+      font-weight: 600;
+    }
+    .badge-nurse { background: var(--accent-blue-bg); color: var(--accent-blue); }
+    .badge-rehab { background: var(--accent-amber-bg); color: var(--accent-amber); }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    .empty-state-icon { font-size: 36px; margin-bottom: 12px; display: block; }
+
+    /* Loading */
+    .loading {
+      display: flex; align-items: center; justify-content: center;
+      padding: 40px; color: var(--text-muted); font-size: 14px; gap: 10px;
+    }
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2.5px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      backdrop-filter: blur(3px);
+      display: none;
+      align-items: center; justify-content: center;
+      z-index: 1000; padding: 20px;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: var(--surface);
+      border-radius: 18px;
+      width: 100%; max-width: 680px;
+      max-height: 88vh; overflow-y: auto;
+      box-shadow: var(--shadow-lg);
+      animation: modalIn 0.2s ease;
+    }
+    @keyframes modalIn { from { opacity: 0; transform: scale(0.96) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    .modal-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+      position: sticky; top: 0; background: var(--surface); z-index: 1;
+      border-radius: 18px 18px 0 0;
+    }
+    .modal-header h3 { font-size: 16px; font-weight: 700; }
+    .modal-close {
+      width: 32px; height: 32px;
+      border: none; background: var(--bg);
+      border-radius: 8px; cursor: pointer;
+      font-size: 18px; color: var(--text-secondary);
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    .modal-close:hover { background: var(--border); }
+    .modal-body { padding: 24px; }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+    .detail-item label { display: block; font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.4px; }
+    .detail-item .val { font-size: 14px; color: var(--text); font-weight: 500; }
+    .detail-record {
+      background: var(--bg); padding: 16px 18px;
+      border-radius: var(--radius);
+      white-space: pre-wrap;
+      line-height: 1.75; font-size: 13.5px;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    /* Settings */
+    .settings-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+      padding: 22px 24px;
+    }
+    .settings-card + .settings-card { margin-top: 16px; }
+    .settings-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 16px; }
+    .settings-row { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
+    .settings-row + .settings-row { margin-top: 14px; }
+    .settings-field { flex: 1; min-width: 180px; }
+    .settings-field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; }
+    .settings-field input {
+      width: 100%; padding: 9px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 6px; font-size: 14px;
+      font-family: inherit;
+    }
+    .settings-field input:focus { outline: none; border-color: var(--primary); }
+    .gas-url-display {
+      background: var(--bg);
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      word-break: break-all;
+      border: 1px solid var(--border);
+      font-family: 'DM Sans', monospace;
+    }
+
+    /* Report detail */
+    .report-content {
+      background: var(--bg);
+      padding: 16px 18px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      white-space: pre-wrap;
+      line-height: 1.75;
+      font-size: 13.5px;
+      margin-top: 8px;
+    }
+    .report-section { margin-bottom: 16px; }
+    .report-section-label {
+      font-size: 12px; font-weight: 700; color: var(--primary);
+      margin-bottom: 6px;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--text); color: white;
+      padding: 12px 20px; border-radius: 10px;
+      font-size: 13px; font-weight: 500;
+      box-shadow: var(--shadow-lg);
+      z-index: 2000;
+      animation: toastIn 0.3s ease;
+      display: none;
+    }
+    .toast.show { display: block; }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .main-content { padding: 16px; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .filter-row { flex-direction: column; }
+      .filter-group { min-width: 100%; }
+      .detail-grid { grid-template-columns: 1fr; }
+      .header { padding: 0 16px; }
+      .settings-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div class="login-container" id="loginContainer">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon">📋</div>
+      <h1>訪問看護記録システム</h1>
+      <p>管理画面</p>
+    </div>
+    <div class="login-error" id="loginError">IDまたはパスワードが正しくありません</div>
+    <div class="form-group">
+      <label>ログインID</label>
+      <input type="text" id="loginId" placeholder="admin" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label>パスワード</label>
+      <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="login-btn" onclick="handleLogin()">ログイン</button>
+    <p class="login-hint">※ 管理者アカウントでログインしてください</p>
+  </div>
+</div>
+
+<!-- ===== DASHBOARD ===== -->
+<div class="dashboard" id="dashboard">
+  <header class="header">
+    <div class="header-logo">
+      <div class="header-logo-mark">📋</div>
+      訪問看護記録
+    </div>
+    <div class="header-right">
+      <span class="header-org" id="headerOrgName">-</span>
+      <button class="logout-btn" onclick="handleLogout()">ログアウト</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">メイン</div>
+        <button class="nav-item active" data-page="dashboard-page">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+          ダッシュボード
+        </button>
+        <button class="nav-item" data-page="records-page">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          記録一覧
+        </button>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">管理</div>
+        <button class="nav-item" data-page="users-page">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+          利用者一覧
+        </button>
+        <button class="nav-item" data-page="staff-page">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          スタッフ管理
+        </button>
+        <button class="nav-item" data-page="reports-page">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          報告書
+        </button>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">システム</div>
+        <button class="nav-item" data-page="settings-page">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          設定
+        </button>
+      </div>
+    </nav>
+
+    <main class="main-content">
+
+      <!-- ========== DASHBOARD PAGE ========== -->
+      <div class="page active" id="dashboard-page">
+        <div class="page-title">ダッシュボード</div>
+        <div class="stats-grid" id="statsGrid">
+          <div class="stat-card"><div class="loading"><div class="spinner"></div></div></div>
+          <div class="stat-card"><div class="loading"><div class="spinner"></div></div></div>
+          <div class="stat-card"><div class="loading"><div class="spinner"></div></div></div>
+          <div class="stat-card"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h2>最近の記録</h2>
+            <button class="btn btn-ghost btn-sm" onclick="showPage('records-page')">すべて見る →</button>
+          </div>
+          <div id="recentRecordsTable">
+            <div class="loading"><div class="spinner"></div>読み込み中...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== RECORDS PAGE ========== -->
+      <div class="page" id="records-page">
+        <div class="page-title">記録一覧</div>
+        <div class="filter-bar">
+          <div class="filter-row">
+            <div class="filter-group">
+              <label>開始日</label>
+              <input type="date" id="filterStartDate">
+            </div>
+            <div class="filter-group">
+              <label>終了日</label>
+              <input type="date" id="filterEndDate">
+            </div>
+            <div class="filter-group">
+              <label>利用者</label>
+              <select id="filterPatient"><option value="">すべて</option></select>
+            </div>
+            <div class="filter-group">
+              <label>職種</label>
+              <select id="filterJobType">
+                <option value="">すべて</option>
+                <option value="看護師">看護師</option>
+                <option value="リハビリ職">リハビリ職</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label>記録者</label>
+              <select id="filterRecorder"><option value="">すべて</option></select>
+            </div>
+            <button class="btn btn-primary" onclick="loadRecords()">検索</button>
+            <button class="btn btn-secondary" onclick="resetFilters()">リセット</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h2 id="recordsCount">検索結果</h2>
+            <div class="card-actions">
+              <button class="btn btn-secondary btn-sm" onclick="exportCSV()">📥 CSV出力</button>
+            </div>
+          </div>
+          <div id="recordsTable">
+            <div class="loading"><div class="spinner"></div>読み込み中...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== USERS PAGE ========== -->
+      <div class="page" id="users-page">
+        <div class="page-title">利用者一覧</div>
+        <div class="card">
+          <div class="card-header">
+            <h2 id="usersCount">利用者</h2>
+          </div>
+          <div id="usersTable">
+            <div class="loading"><div class="spinner"></div>読み込み中...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== STAFF PAGE ========== -->
+      <div class="page" id="staff-page">
+        <div class="page-title">スタッフ管理</div>
+        <div class="card">
+          <div class="card-header">
+            <h2 id="staffCount">スタッフ</h2>
+          </div>
+          <div id="staffTable">
+            <div class="loading"><div class="spinner"></div>読み込み中...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== REPORTS PAGE ========== -->
+      <div class="page" id="reports-page">
+        <div class="page-title">報告書</div>
+        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">
+          報告書の生成はスプレッドシートの「報告書作成」メニューから実行してください。<br>
+          ここでは生成済みの報告書を閲覧・コピーできます。
+        </p>
+        <div id="reportsContainer">
+          <div class="loading"><div class="spinner"></div>読み込み中...</div>
+        </div>
+      </div>
+
+      <!-- ========== SETTINGS PAGE ========== -->
+      <div class="page" id="settings-page">
+        <div class="page-title">設定</div>
+        <div class="settings-card">
+          <h3>接続設定</h3>
+          <div class="settings-row">
+            <div class="settings-field" style="flex:3;">
+              <label>GAS WebアプリURL</label>
+              <input type="url" id="settingsGasUrl" placeholder="https://script.google.com/macros/s/.../exec">
+            </div>
+            <button class="btn btn-primary" onclick="saveSettings()" style="margin-bottom:1px;">保存</button>
+            <button class="btn btn-secondary" onclick="testConnection()" style="margin-bottom:1px;">接続テスト</button>
+          </div>
+          <div id="connectionStatus" style="margin-top:10px;"></div>
+        </div>
+        <div class="settings-card">
+          <h3>ログイン設定</h3>
+          <div class="settings-row">
+            <div class="settings-field">
+              <label>管理者ID</label>
+              <input type="text" id="settingsAdminId" placeholder="admin">
+            </div>
+            <div class="settings-field">
+              <label>パスワード変更</label>
+              <input type="password" id="settingsNewPassword" placeholder="新しいパスワード">
+            </div>
+            <button class="btn btn-primary" onclick="saveAuthSettings()" style="margin-bottom:1px;">保存</button>
+          </div>
+        </div>
+        <div class="settings-card">
+          <h3>事業所情報</h3>
+          <div class="settings-row">
+            <div class="settings-field" style="flex:2;">
+              <label>事業所名</label>
+              <input type="text" id="settingsOrgName" placeholder="○○訪問看護ステーション">
+            </div>
+            <button class="btn btn-primary" onclick="saveOrgSettings()" style="margin-bottom:1px;">保存</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ===== MODAL ===== -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3 id="modalTitle">記録詳細</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================
+// CONFIG
+// ============================================
+const STORAGE_KEY = 'nursing_admin_config';
+const DEFAULT_CONFIG = {
+  gasUrl: '',
+  adminId: 'admin',
+  adminPassword: 'demo1234',
+  orgName: '訪問看護ステーション'
+};
+
+let APP_CONFIG = loadConfig();
+let cachedRecordsData = null;
+
+function loadConfig() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? { ...DEFAULT_CONFIG, ...JSON.parse(saved) } : { ...DEFAULT_CONFIG };
+  } catch { return { ...DEFAULT_CONFIG }; }
+}
+
+function saveConfig() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(APP_CONFIG));
+}
+
+// ============================================
+// API
+// ============================================
+async function callAPI(action, params = {}) {
+  if (!APP_CONFIG.gasUrl) {
+    throw new Error('GAS URLが設定されていません。設定画面からURLを入力してください。');
+  }
+  const body = { action, ...params };
+  const res = await fetch(APP_CONFIG.gasUrl, {
+    method: 'POST',
+    body: JSON.stringify(body)
+  });
+  // GAS returns text/plain for JSONP, parse manually
+  const text = await res.text();
+  const data = JSON.parse(text);
+  if (!data.success) throw new Error(data.message || 'API Error');
+  return data.data;
+}
+
+// ============================================
+// AUTH
+// ============================================
+function handleLogin() {
+  const id = document.getElementById('loginId').value.trim();
+  const pw = document.getElementById('loginPassword').value;
+
+  if (id === APP_CONFIG.adminId && pw === APP_CONFIG.adminPassword) {
+    document.getElementById('loginContainer').classList.add('hidden');
+    document.getElementById('dashboard').classList.add('active');
+    document.getElementById('headerOrgName').textContent = APP_CONFIG.orgName;
+    document.getElementById('loginError').style.display = 'none';
+    loadDashboard();
+  } else {
+    document.getElementById('loginError').style.display = 'block';
+  }
+}
+
+function handleLogout() {
+  document.getElementById('loginContainer').classList.remove('hidden');
+  document.getElementById('dashboard').classList.remove('active');
+  document.getElementById('loginId').value = '';
+  document.getElementById('loginPassword').value = '';
+}
+
+document.addEventListener('keypress', e => {
+  if (e.key === 'Enter' && !document.getElementById('loginContainer').classList.contains('hidden')) {
+    handleLogin();
+  }
+});
+
+// ============================================
+// NAVIGATION
+// ============================================
+function showPage(pageId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(pageId).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    n.classList.toggle('active', n.dataset.page === pageId);
+  });
+
+  // Lazy load
+  if (pageId === 'dashboard-page') loadDashboard();
+  else if (pageId === 'records-page') loadRecords();
+  else if (pageId === 'users-page') loadUsers();
+  else if (pageId === 'staff-page') loadStaff();
+  else if (pageId === 'reports-page') loadReports();
+  else if (pageId === 'settings-page') loadSettings();
+}
+
+document.querySelectorAll('.nav-item').forEach(btn => {
+  btn.addEventListener('click', () => showPage(btn.dataset.page));
+});
+
+// ============================================
+// DASHBOARD
+// ============================================
+async function loadDashboard() {
+  try {
+    const data = await callAPI('admin_dashboard');
+    const changeClass = data.monthlyChange >= 0 ? 'stat-change-up' : 'stat-change-down';
+    const changeIcon = data.monthlyChange >= 0 ? '↑' : '↓';
+
+    document.getElementById('statsGrid').innerHTML = `
+      <div class="stat-card">
+        <div class="stat-card-label">今月の訪問件数</div>
+        <div class="stat-card-value">${data.monthlyVisits}</div>
+        <div class="stat-card-sub ${changeClass}">前月比 ${changeIcon}${Math.abs(data.monthlyChange)}%</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">今日の訪問件数</div>
+        <div class="stat-card-value">${data.todayVisits}</div>
+        <div class="stat-card-sub">本日分</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">利用者数</div>
+        <div class="stat-card-value">${data.activeUsers}</div>
+        <div class="stat-card-sub">今月アクティブ</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">スタッフ数</div>
+        <div class="stat-card-value">${data.staffCount}</div>
+        <div class="stat-card-sub">${data.staffBreakdown}</div>
+      </div>
+    `;
+
+    if (data.recentRecords && data.recentRecords.length > 0) {
+      document.getElementById('recentRecordsTable').innerHTML = `<table>
+        <thead><tr><th>訪問日</th><th>利用者</th><th>職種</th><th>記録者</th><th>操作</th></tr></thead>
+        <tbody>${data.recentRecords.slice(0, 8).map(r => `<tr>
+          <td>${r.date}</td>
+          <td>${esc(r.patient)}</td>
+          <td><span class="badge ${r.jobType === 'リハビリ職' ? 'badge-rehab' : 'badge-nurse'}">${esc(r.jobType)}</span></td>
+          <td>${esc(r.recorder)}</td>
+          <td><button class="btn btn-ghost btn-sm" onclick="openRecordDetail(${r.rowIndex})">詳細</button></td>
+        </tr>`).join('')}</tbody>
+      </table>`;
+    } else {
+      document.getElementById('recentRecordsTable').innerHTML = '<div class="empty-state"><span class="empty-state-icon">📝</span>記録がまだありません</div>';
+    }
+  } catch (err) {
+    document.getElementById('statsGrid').innerHTML = `<div class="stat-card" style="grid-column:1/-1;">
+      <div class="empty-state"><span class="empty-state-icon">⚠️</span>${esc(err.message)}</div>
+    </div>`;
+    document.getElementById('recentRecordsTable').innerHTML = '';
+  }
+}
+
+// ============================================
+// RECORDS
+// ============================================
+async function loadRecords() {
+  const container = document.getElementById('recordsTable');
+  container.innerHTML = '<div class="loading"><div class="spinner"></div>読み込み中...</div>';
+
+  try {
+    const params = {
+      startDate: document.getElementById('filterStartDate').value?.replace(/-/g, '/') || '',
+      endDate: document.getElementById('filterEndDate').value?.replace(/-/g, '/') || '',
+      patient: document.getElementById('filterPatient').value,
+      jobType: document.getElementById('filterJobType').value,
+      recorder: document.getElementById('filterRecorder').value
+    };
+
+    const data = await callAPI('admin_records', params);
+    cachedRecordsData = data;
+
+    document.getElementById('recordsCount').textContent = `検索結果: ${data.total}件`;
+
+    // Populate filter dropdowns
+    populateSelect('filterPatient', data.patients, params.patient);
+    populateSelect('filterRecorder', data.recorders, params.recorder);
+
+    if (data.records.length === 0) {
+      container.innerHTML = '<div class="empty-state"><span class="empty-state-icon">📝</span>該当する記録がありません</div>';
+      return;
+    }
+
+    container.innerHTML = `<table>
+      <thead><tr><th>訪問日</th><th>利用者</th><th>職種</th><th>記録者</th><th>記録(抜粋)</th><th>操作</th></tr></thead>
+      <tbody>${data.records.map(r => `<tr>
+        <td>${r.date}</td>
+        <td>${esc(r.patient)}</td>
+        <td><span class="badge ${r.jobType === 'リハビリ職' ? 'badge-rehab' : 'badge-nurse'}">${esc(r.jobType)}</span></td>
+        <td>${esc(r.recorder)}</td>
+        <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--text-secondary);">${esc(r.recordPreview)}</td>
+        <td><button class="btn btn-ghost btn-sm" onclick="openRecordDetail(${r.rowIndex})">詳細</button></td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  } catch (err) {
+    container.innerHTML = `<div class="empty-state"><span class="empty-state-icon">⚠️</span>${esc(err.message)}</div>`;
+  }
+}
+
+function resetFilters() {
+  const now = new Date();
+  document.getElementById('filterStartDate').value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
+  document.getElementById('filterEndDate').value = now.toISOString().split('T')[0];
+  document.getElementById('filterPatient').value = '';
+  document.getElementById('filterJobType').value = '';
+  document.getElementById('filterRecorder').value = '';
+  loadRecords();
+}
+
+function populateSelect(id, items, currentValue) {
+  const el = document.getElementById(id);
+  const opts = ['<option value="">すべて</option>'];
+  (items || []).forEach(item => {
+    opts.push(`<option value="${esc(item)}" ${item === currentValue ? 'selected' : ''}>${esc(item)}</option>`);
+  });
+  el.innerHTML = opts.join('');
+}
+
+function exportCSV() {
+  if (!cachedRecordsData || !cachedRecordsData.records.length) {
+    showToast('エクスポートするデータがありません');
+    return;
+  }
+  const rows = [['訪問日', '利用者', '職種', '記録者'].join(',')];
+  cachedRecordsData.records.forEach(r => {
+    rows.push([r.date, r.patient, r.jobType, r.recorder].map(v => `"${v}"`).join(','));
+  });
+  const blob = new Blob(['\uFEFF' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `記録一覧_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  showToast('CSVをダウンロードしました');
+}
+
+// ============================================
+// RECORD DETAIL
+// ============================================
+async function openRecordDetail(rowIndex) {
+  document.getElementById('modalTitle').textContent = '記録詳細';
+  document.getElementById('modalBody').innerHTML = '<div class="loading"><div class="spinner"></div>読み込み中...</div>';
+  document.getElementById('modalOverlay').classList.add('active');
+
+  try {
+    const data = await callAPI('admin_record_detail', { rowIndex });
+    document.getElementById('modalBody').innerHTML = `
+      <div class="detail-grid">
+        <div class="detail-item"><label>訪問日</label><div class="val">${esc(data.date)}</div></div>
+        <div class="detail-item"><label>利用者名</label><div class="val">${esc(data.patient)}</div></div>
+        <div class="detail-item"><label>職種</label><div class="val"><span class="badge ${data.jobType === 'リハビリ職' ? 'badge-rehab' : 'badge-nurse'}">${esc(data.jobType)}</span></div></div>
+        <div class="detail-item"><label>記録者</label><div class="val">${esc(data.recorder)}</div></div>
+      </div>
+      <div style="margin-bottom:8px;font-size:13px;font-weight:600;color:var(--text-secondary);">記録内容</div>
+      <div class="detail-record">${esc(data.record)}</div>
+      <div style="margin-top:16px;display:flex;gap:8px;">
+        <button class="btn btn-primary btn-sm" onclick="copyText(\`${escJs(data.record)}\`)">📋 コピー</button>
+      </div>
+    `;
+  } catch (err) {
+    document.getElementById('modalBody').innerHTML = `<div class="empty-state">${esc(err.message)}</div>`;
+  }
+}
+
+// ============================================
+// USERS
+// ============================================
+async function loadUsers() {
+  const container = document.getElementById('usersTable');
+  container.innerHTML = '<div class="loading"><div class="spinner"></div>読み込み中...</div>';
+
+  try {
+    const data = await callAPI('admin_users');
+    document.getElementById('usersCount').textContent = `登録利用者: ${data.users.length}名`;
+
+    if (data.users.length === 0) {
+      container.innerHTML = '<div class="empty-state"><span class="empty-state-icon">👤</span>利用者がまだいません</div>';
+      return;
+    }
+
+    container.innerHTML = `<table>
+      <thead><tr><th>利用者名</th><th>訪問回数（今月）</th><th>最終訪問日</th><th>主担当</th></tr></thead>
+      <tbody>${data.users.map(u => `<tr>
+        <td style="font-weight:500;">${esc(u.name)}</td>
+        <td>${u.monthlyCount}回</td>
+        <td>${u.lastVisit}</td>
+        <td>${esc(u.mainRecorder)}</td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  } catch (err) {
+    container.innerHTML = `<div class="empty-state"><span class="empty-state-icon">⚠️</span>${esc(err.message)}</div>`;
+  }
+}
+
+// ============================================
+// STAFF
+// ============================================
+async function loadStaff() {
+  const container = document.getElementById('staffTable');
+  container.innerHTML = '<div class="loading"><div class="spinner"></div>読み込み中...</div>';
+
+  try {
+    const data = await callAPI('admin_staff');
+    document.getElementById('staffCount').textContent = `登録スタッフ: ${data.staff.length}名`;
+
+    if (data.staff.length === 0) {
+      container.innerHTML = '<div class="empty-state"><span class="empty-state-icon">👥</span>スタッフが登録されていません</div>';
+      return;
+    }
+
+    container.innerHTML = `<table>
+      <thead><tr><th>名前</th><th>職種</th><th>訪問件数（今月）</th></tr></thead>
+      <tbody>${data.staff.map(s => `<tr>
+        <td style="font-weight:500;">${esc(s.name)}</td>
+        <td><span class="badge ${s.jobType === 'リハビリ職' ? 'badge-rehab' : 'badge-nurse'}">${esc(s.jobType)}</span></td>
+        <td>${s.monthlyCount}件</td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  } catch (err) {
+    container.innerHTML = `<div class="empty-state"><span class="empty-state-icon">⚠️</span>${esc(err.message)}</div>`;
+  }
+}
+
+// ============================================
+// REPORTS
+// ============================================
+async function loadReports() {
+  const container = document.getElementById('reportsContainer');
+  container.innerHTML = '<div class="loading"><div class="spinner"></div>読み込み中...</div>';
+
+  try {
+    const data = await callAPI('admin_reports');
+
+    if (!data.reports || data.reports.length === 0) {
+      container.innerHTML = '<div class="card"><div class="empty-state"><span class="empty-state-icon">📊</span>生成済みの報告書がありません<br><small>スプレッドシートの「報告書作成」メニューから生成してください</small></div></div>';
+      return;
+    }
+
+    container.innerHTML = data.reports.map(report => `
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-header">
+          <h2>${esc(report.period)}（${report.userCount}名）</h2>
+        </div>
+        <table>
+          <thead><tr><th>利用者</th><th>訪問回数</th><th>病状の経過</th><th>リハ別添</th><th>操作</th></tr></thead>
+          <tbody>${report.entries.map((e, idx) => `<tr>
+            <td style="font-weight:500;">${esc(e.patient)}</td>
+            <td>${e.visitCount}回</td>
+            <td>${e.hasProgress ? '✅' : '—'}</td>
+            <td>${e.hasRehab ? '✅' : '—'}</td>
+            <td>
+              ${e.hasProgress ? `<button class="btn btn-ghost btn-sm" onclick="showReportDetail('${escJs(e.patient)}', '${escJs(report.period)}', '病状の経過', \`${escJs(e.progress)}\`)">経過</button>` : ''}
+              ${e.hasRehab ? `<button class="btn btn-ghost btn-sm" onclick="showReportDetail('${escJs(e.patient)}', '${escJs(report.period)}', 'リハ別添', \`${escJs(e.rehabAddendum)}\`)">リハ</button>` : ''}
+              <button class="btn btn-secondary btn-sm" onclick="copyReportText('${escJs(e.patient)}', \`${escJs(e.progress)}\`, \`${escJs(e.rehabAddendum)}\`)">コピー</button>
+            </td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+    `).join('');
+  } catch (err) {
+    container.innerHTML = `<div class="card"><div class="empty-state"><span class="empty-state-icon">⚠️</span>${esc(err.message)}</div></div>`;
+  }
+}
+
+function showReportDetail(patient, period, type, content) {
+  document.getElementById('modalTitle').textContent = `${patient} - ${type}（${period}）`;
+  document.getElementById('modalBody').innerHTML = `
+    <div class="report-content">${esc(content)}</div>
+    <div style="margin-top:14px;">
+      <button class="btn btn-primary btn-sm" onclick="copyText(\`${escJs(content)}\`)">📋 コピー</button>
+    </div>
+  `;
+  document.getElementById('modalOverlay').classList.add('active');
+}
+
+function copyReportText(patient, progress, rehab) {
+  let text = '';
+  if (progress) text += progress;
+  if (progress && rehab) text += '\n\n---\n\n';
+  if (rehab) text += rehab;
+  copyText(text);
+}
+
+// ============================================
+// SETTINGS
+// ============================================
+function loadSettings() {
+  document.getElementById('settingsGasUrl').value = APP_CONFIG.gasUrl || '';
+  document.getElementById('settingsAdminId').value = APP_CONFIG.adminId || 'admin';
+  document.getElementById('settingsOrgName').value = APP_CONFIG.orgName || '';
+}
+
+function saveSettings() {
+  APP_CONFIG.gasUrl = document.getElementById('settingsGasUrl').value.trim();
+  saveConfig();
+  showToast('GAS URLを保存しました');
+}
+
+function saveAuthSettings() {
+  const newId = document.getElementById('settingsAdminId').value.trim();
+  const newPw = document.getElementById('settingsNewPassword').value;
+  if (newId) APP_CONFIG.adminId = newId;
+  if (newPw) APP_CONFIG.adminPassword = newPw;
+  saveConfig();
+  showToast('ログイン設定を保存しました');
+}
+
+function saveOrgSettings() {
+  APP_CONFIG.orgName = document.getElementById('settingsOrgName').value.trim();
+  saveConfig();
+  document.getElementById('headerOrgName').textContent = APP_CONFIG.orgName;
+  showToast('事業所情報を保存しました');
+}
+
+async function testConnection() {
+  const statusEl = document.getElementById('connectionStatus');
+  statusEl.innerHTML = '<span style="color:var(--text-muted);font-size:13px;">接続テスト中...</span>';
+  try {
+    // Save first
+    APP_CONFIG.gasUrl = document.getElementById('settingsGasUrl').value.trim();
+    saveConfig();
+    const res = await fetch(APP_CONFIG.gasUrl);
+    const text = await res.text();
+    const data = JSON.parse(text);
+    if (data.success) {
+      statusEl.innerHTML = '<span style="color:var(--accent-green);font-size:13px;font-weight:600;">✅ 接続成功！API is running</span>';
+    } else {
+      statusEl.innerHTML = '<span style="color:var(--accent-red);font-size:13px;">❌ 接続失敗: ' + (data.message || 'Unknown') + '</span>';
+    }
+  } catch (err) {
+    statusEl.innerHTML = '<span style="color:var(--accent-red);font-size:13px;">❌ 接続失敗: ' + err.message + '</span>';
+  }
+}
+
+// ============================================
+// UTILITIES
+// ============================================
+function esc(str) {
+  if (!str) return '';
+  const d = document.createElement('div');
+  d.textContent = String(str);
+  return d.innerHTML;
+}
+
+function escJs(str) {
+  if (!str) return '';
+  return String(str).replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
+}
+
+function closeModal(event) {
+  if (!event || event.target === document.getElementById('modalOverlay')) {
+    document.getElementById('modalOverlay').classList.remove('active');
+  }
+}
+
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(() => showToast('コピーしました'));
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+// Init: set default date filters
+(function initFilters() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  document.getElementById('filterStartDate').value = `${y}-${m}-01`;
+  document.getElementById('filterEndDate').value = now.toISOString().split('T')[0];
+})();
+</script>
+</body>
+</html>
