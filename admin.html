@@ -1093,26 +1093,47 @@ async function loadStaff() {
 
   try {
     const data = await callAPI('admin_staff');
-    document.getElementById('staffCount').textContent = `登録スタッフ: ${data.staff.length}名`;
-
+    
     if (data.staff.length === 0) {
+      document.getElementById('staffCount').textContent = '登録スタッフ: 0名';
       container.innerHTML = '<div class="empty-state"><span class="empty-state-icon">👥</span>スタッフが登録されていません</div>';
       return;
     }
 
-    container.innerHTML = `<table>
-      <thead><tr><th>名前</th><th>職種</th><th>訪問件数（今月）</th></tr></thead>
-      <tbody>${data.staff.map(s => `<tr>
-        <td style="font-weight:500;">${esc(s.name)}</td>
-        <td><span class="badge ${s.jobType === 'リハビリ職' ? 'badge-rehab' : 'badge-nurse'}">${esc(s.jobType)}</span></td>
-        <td>${s.monthlyCount}件</td>
-      </tr>`).join('')}</tbody>
-    </table>`;
+    // 職種別にグループ化
+    const nurses = data.staff.filter(s => s.jobType === '看護師');
+    const rehabs = data.staff.filter(s => s.jobType === 'リハビリ職');
+    const others = data.staff.filter(s => s.jobType !== '看護師' && s.jobType !== 'リハビリ職');
+
+    document.getElementById('staffCount').textContent = `登録スタッフ: ${data.staff.length}名（看護師${nurses.length} / リハ${rehabs.length}${others.length ? ' / 他' + others.length : ''}）`;
+
+    function staffGroupHTML(title, badge, list) {
+      if (list.length === 0) return '';
+      const totalVisits = list.reduce((s, v) => s + v.monthlyCount, 0);
+      return `
+        <div style="margin-bottom:20px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:0 4px;">
+            <span class="badge ${badge}" style="font-size:12px;">${esc(title)}</span>
+            <span style="font-size:13px;color:var(--text-secondary);">${list.length}名 / 今月合計 ${totalVisits}件</span>
+          </div>
+          <table>
+            <thead><tr><th>名前</th><th style="text-align:center;">訪問件数（今月）</th></tr></thead>
+            <tbody>${list.sort((a, b) => b.monthlyCount - a.monthlyCount).map(s => `<tr>
+              <td style="font-weight:500;">${esc(s.name)}</td>
+              <td style="text-align:center;">${s.monthlyCount}件</td>
+            </tr>`).join('')}</tbody>
+          </table>
+        </div>`;
+    }
+
+    container.innerHTML = 
+      staffGroupHTML('看護師', 'badge-nurse', nurses) +
+      staffGroupHTML('リハビリ職', 'badge-rehab', rehabs) +
+      staffGroupHTML('その他', '', others);
   } catch (err) {
     container.innerHTML = `<div class="empty-state"><span class="empty-state-icon">⚠️</span>${esc(err.message)}</div>`;
   }
 
-  // 営業時間分析も同時にロード
   loadBusinessHours();
 }
 
