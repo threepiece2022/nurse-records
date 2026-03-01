@@ -33,6 +33,11 @@
     .input-field:disabled { background: #f5f5f5; color: #999; }
     .input-hint { font-size: 11px; color: #8a9a92; margin-top: 4px; }
     .input-error { font-size: 11px; color: #ef4444; margin-top: 4px; }
+    .autocomplete-wrapper { position: relative; }
+    .autocomplete-list { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 2px solid #e5ebe8; border-radius: 10px; box-shadow: 0 4px 24px rgba(0, 80, 60, 0.12); max-height: 200px; overflow-y: auto; z-index: 100; display: none; }
+    .autocomplete-list.open { display: block; }
+    .autocomplete-item { padding: 10px 14px; font-size: 14px; cursor: pointer; transition: background 0.15s; }
+    .autocomplete-item:hover, .autocomplete-item.active { background: #e8f4f0; color: #00816a; }
     .record-section { text-align: center; padding: 20px 0; }
     .record-btn { width: 130px; height: 130px; border-radius: 50%; border: none; cursor: pointer; position: relative; transition: all 0.3s ease; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; margin-bottom: 12px; background: linear-gradient(145deg, #00a67d, #008f6b); box-shadow: 0 8px 32px rgba(0, 166, 125, 0.35); }
     .record-btn:active { transform: scale(0.96); }
@@ -93,21 +98,22 @@
           </svg>
           基本情報
         </div>
-        
+
         <div class="input-row">
           <div class="input-group">
             <label class="input-label">訪問日</label>
             <input type="date" id="visitDate" class="input-field">
           </div>
-          
-          <div class="input-group">
+
+          <div class="input-group autocomplete-wrapper">
             <label class="input-label">利用者名（カナ）</label>
-            <input type="text" id="patientName" class="input-field" placeholder="ヤマダタロウ">
+            <input type="text" id="patientName" class="input-field" placeholder="ヤマダタロウ" autocomplete="off">
+            <div id="patientSuggestions" class="autocomplete-list"></div>
             <div id="patientNameHint" class="input-hint">カタカナ・スペースなしで入力</div>
             <div id="patientNameError" class="input-error hidden"></div>
           </div>
         </div>
-        
+
         <div class="input-row" style="margin-top: 14px;">
           <div class="input-group">
             <label class="input-label">職種</label>
@@ -117,7 +123,7 @@
               <option value="リハビリ職">リハビリ職</option>
             </select>
           </div>
-          
+
           <div class="input-group">
             <label class="input-label">記録者</label>
             <select id="recorderName" class="input-field" disabled>
@@ -157,11 +163,11 @@
           </svg>
           音声認識テキスト
         </div>
-        
+
         <div id="errorBox" class="error-box hidden"></div>
-        
+
         <textarea id="transcript" class="textarea" placeholder="音声入力の内容がここに表示されます。直接入力・編集も可能です。"></textarea>
-        
+
         <div class="button-group">
           <button id="generateBtn" class="action-btn primary-btn" onclick="generateRecord()" disabled>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -169,7 +175,7 @@
             </svg>
             記録を生成
           </button>
-          
+
           <button class="action-btn secondary-btn" onclick="resetAll()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
@@ -220,7 +226,7 @@
           </svg>
           生成された記録
         </div>
-        
+
         <textarea id="editableRecord" class="editable-record"></textarea>
 
         <div class="button-group">
@@ -232,7 +238,7 @@
             </svg>
             保存する
           </button>
-          
+
           <button class="action-btn secondary-btn" onclick="copyToClipboard()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
@@ -240,7 +246,7 @@
             </svg>
             コピー
           </button>
-          
+
           <button class="action-btn secondary-btn" onclick="goBack()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="19" y1="12" x2="5" y2="12"/>
@@ -294,39 +300,39 @@
 
   <div id="toast" class="toast hidden"></div>
 
+  <script src="config.js"></script>
   <script>
-    // ============================================
-    // 設定 - GASデプロイ後にURLを設定してください
-    // ============================================
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbz3C9D2pLbg19e27HeVyGV3un7cLvdPOBrm6BVqbITYzZgPPekZyWNwYQjnC24Nj-QiGA/exec';
-    
+    const GAS_URL = SITE_CONFIG.gasUrl;
+
     let isRecording = false;
     let recognition = null;
     let recordingTimer = null;
     let recordingSeconds = 0;
     let accumulatedTranscript = '';
     let staffList = [];
+    let userList = [];
+    let suggestionIndex = -1;
 
     document.addEventListener('DOMContentLoaded', async function() {
       const today = new Date().toISOString().split('T')[0];
       document.getElementById('visitDate').value = today;
-      
-      document.getElementById('patientName').addEventListener('input', validatePatientName);
+
+      const patientInput = document.getElementById('patientName');
+      patientInput.addEventListener('input', validatePatientName);
+      patientInput.addEventListener('keydown', handleSuggestionKeys);
+      document.addEventListener('click', function(e) {
+        if (!e.target.closest('.autocomplete-wrapper')) closeSuggestions();
+      });
       document.getElementById('transcript').addEventListener('input', updateGenerateButton);
       document.getElementById('jobType').addEventListener('change', onJobTypeChange);
       document.getElementById('recorderName').addEventListener('change', updateGenerateButton);
-      
-      // 従業員リストを読み込み
-      await loadStaffList();
+
+      await Promise.all([loadStaffList(), loadUserList()]);
     });
 
     // 従業員リストを取得
     async function loadStaffList() {
-      if (GAS_URL === 'YOUR_GAS_WEB_APP_URL_HERE') {
-        console.log('GAS_URL not configured');
-        return;
-      }
-      
+      if (!GAS_URL || GAS_URL.includes('YOUR_')) return;
       try {
         const response = await fetch(GAS_URL, {
           method: 'POST',
@@ -334,89 +340,162 @@
         });
         const text = await response.text();
         const result = JSON.parse(text);
-        
         if (result.success && result.data && result.data.staff) {
           staffList = result.data.staff;
-          console.log('従業員リスト読み込み完了:', staffList.length + '名');
         }
       } catch (err) {
         console.error('従業員リスト取得エラー:', err);
       }
     }
 
+    // 利用者リストを取得
+    async function loadUserList() {
+      if (!GAS_URL || GAS_URL.includes('YOUR_')) return;
+      try {
+        const response = await fetch(GAS_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'getUsers' })
+        });
+        const text = await response.text();
+        const result = JSON.parse(text);
+        if (result.success && result.data && result.data.users) {
+          userList = result.data.users;
+        }
+      } catch (err) {
+        console.error('利用者リスト取得エラー:', err);
+      }
+    }
+
+    // オートコンプリート: サジェスト表示
+    function showSuggestions(filtered) {
+      const list = document.getElementById('patientSuggestions');
+      if (filtered.length === 0) { closeSuggestions(); return; }
+      suggestionIndex = -1;
+      list.innerHTML = filtered.map(function(name, i) {
+        return '<div class="autocomplete-item" data-index="' + i + '" onmousedown="selectSuggestion(\'' + name + '\')">' + name + '</div>';
+      }).join('');
+      list.classList.add('open');
+    }
+
+    // オートコンプリート: サジェスト非表示
+    function closeSuggestions() {
+      const list = document.getElementById('patientSuggestions');
+      list.classList.remove('open');
+      list.innerHTML = '';
+      suggestionIndex = -1;
+    }
+
+    // オートコンプリート: サジェスト選択
+    function selectSuggestion(name) {
+      document.getElementById('patientName').value = name;
+      closeSuggestions();
+      validatePatientName();
+    }
+
+    // オートコンプリート: キーボード操作
+    function handleSuggestionKeys(e) {
+      const list = document.getElementById('patientSuggestions');
+      if (!list.classList.contains('open')) return;
+      const items = list.querySelectorAll('.autocomplete-item');
+      if (items.length === 0) return;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        suggestionIndex = Math.min(suggestionIndex + 1, items.length - 1);
+        updateActiveItem(items);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        suggestionIndex = Math.max(suggestionIndex - 1, 0);
+        updateActiveItem(items);
+      } else if (e.key === 'Enter' && suggestionIndex >= 0) {
+        e.preventDefault();
+        selectSuggestion(items[suggestionIndex].textContent);
+      } else if (e.key === 'Escape') {
+        closeSuggestions();
+      }
+    }
+
+    function updateActiveItem(items) {
+      items.forEach(function(item, i) {
+        item.classList.toggle('active', i === suggestionIndex);
+      });
+      if (suggestionIndex >= 0) items[suggestionIndex].scrollIntoView({ block: 'nearest' });
+    }
+
     // 職種変更時の処理
     function onJobTypeChange() {
       const jobType = document.getElementById('jobType').value;
       const recorderSelect = document.getElementById('recorderName');
-      
-      // 記録者リストをクリア
       recorderSelect.innerHTML = '';
-      
       if (!jobType) {
         recorderSelect.innerHTML = '<option value="">先に職種を選択</option>';
         recorderSelect.disabled = true;
         updateGenerateButton();
         return;
       }
-      
-      // 選択された職種の従業員をフィルタ
-      const filteredStaff = staffList.filter(s => s.jobType === jobType);
-      
+      const filteredStaff = staffList.filter(function(s) { return s.jobType === jobType; });
       if (filteredStaff.length === 0) {
         recorderSelect.innerHTML = '<option value="">該当する従業員がいません</option>';
         recorderSelect.disabled = true;
       } else {
         recorderSelect.innerHTML = '<option value="">選択してください</option>';
-        filteredStaff.forEach(staff => {
-          const option = document.createElement('option');
+        filteredStaff.forEach(function(staff) {
+          var option = document.createElement('option');
           option.value = staff.name;
           option.textContent = staff.name;
           recorderSelect.appendChild(option);
         });
         recorderSelect.disabled = false;
       }
-      
       updateGenerateButton();
     }
 
     function validatePatientName() {
-      const input = document.getElementById('patientName');
-      const hint = document.getElementById('patientNameHint');
-      const error = document.getElementById('patientNameError');
-      let value = input.value;
-      
-      const cleanedValue = value.replace(/[\s　]/g, '');
+      var input = document.getElementById('patientName');
+      var hint = document.getElementById('patientNameHint');
+      var error = document.getElementById('patientNameError');
+      var value = input.value;
+
+      var cleanedValue = value.replace(/[\s　]/g, '');
       if (value !== cleanedValue) {
         input.value = cleanedValue;
         value = cleanedValue;
       }
-      
-      const katakanaRegex = /^[ァ-ヶー]*$/;
-      
+
+      var katakanaRegex = /^[ァ-ヶー]*$/;
+
       if (value && !katakanaRegex.test(value)) {
         input.classList.add('error');
         hint.classList.add('hidden');
         error.textContent = 'カタカナのみ・スペースなしで入力してください';
         error.classList.remove('hidden');
+        closeSuggestions();
         updateGenerateButton();
         return false;
       } else {
         input.classList.remove('error');
         hint.classList.remove('hidden');
         error.classList.add('hidden');
+        // 利用者名サジェスト表示
+        if (value && userList.length > 0) {
+          var filtered = userList.filter(function(name) {
+            return name.startsWith(value) && name !== value;
+          });
+          showSuggestions(filtered);
+        } else {
+          closeSuggestions();
+        }
         updateGenerateButton();
         return true;
       }
     }
 
     function updateGenerateButton() {
-      const transcript = document.getElementById('transcript').value.trim();
-      const patientName = document.getElementById('patientName').value.trim();
-      const jobType = document.getElementById('jobType').value;
-      const recorderName = document.getElementById('recorderName').value;
-      const katakanaRegex = /^[ァ-ヶー]*$/;
-      const btn = document.getElementById('generateBtn');
-      
+      var transcript = document.getElementById('transcript').value.trim();
+      var patientName = document.getElementById('patientName').value.trim();
+      var jobType = document.getElementById('jobType').value;
+      var recorderName = document.getElementById('recorderName').value;
+      var katakanaRegex = /^[ァ-ヶー]*$/;
+      var btn = document.getElementById('generateBtn');
       btn.disabled = !transcript || !patientName || !jobType || !recorderName || (patientName && !katakanaRegex.test(patientName));
     }
 
@@ -434,21 +513,20 @@
         return;
       }
 
-      const isAndroid = /Android/i.test(navigator.userAgent);
-      
+      var isAndroid = /Android/i.test(navigator.userAgent);
+
       function createRecognition() {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         var rec = new SpeechRecognition();
         rec.lang = 'ja-JP';
         rec.continuous = true;
         rec.interimResults = !isAndroid;
-        
+
         var sessionTranscript = '';
         var lastResultIndex = 0;
 
         rec.onresult = function(event) {
           var interimTranscript = '';
-          
           for (var i = lastResultIndex; i < event.results.length; i++) {
             var result = event.results[i];
             if (result.isFinal) {
@@ -458,7 +536,6 @@
               interimTranscript = result[0].transcript;
             }
           }
-          
           document.getElementById('transcript').value = accumulatedTranscript + sessionTranscript + interimTranscript;
           updateGenerateButton();
         };
@@ -468,18 +545,16 @@
             showError('マイクへのアクセスを許可してください');
             stopRecording();
           }
-          // no-speech等のエラーはonendで再起動するため無視
         };
 
         rec.onend = function() {
           if (isRecording) {
-            // 現在までのテキストを確定してから再起動
             accumulatedTranscript = document.getElementById('transcript').value;
             recognition = createRecognition();
             recognition.start();
           }
         };
-        
+
         return rec;
       }
 
@@ -489,7 +564,7 @@
       isRecording = true;
       recordingSeconds = 0;
 
-      const btn = document.getElementById('recordBtn');
+      var btn = document.getElementById('recordBtn');
       btn.classList.add('recording');
       document.getElementById('micIcon').classList.add('hidden');
       document.getElementById('stopIcon').classList.remove('hidden');
@@ -501,8 +576,8 @@
 
       recordingTimer = setInterval(function() {
         recordingSeconds++;
-        const mins = Math.floor(recordingSeconds / 60).toString().padStart(2, '0');
-        const secs = (recordingSeconds % 60).toString().padStart(2, '0');
+        var mins = Math.floor(recordingSeconds / 60).toString().padStart(2, '0');
+        var secs = (recordingSeconds % 60).toString().padStart(2, '0');
         document.getElementById('timerText').textContent = mins + ':' + secs;
       }, 1000);
     }
@@ -512,15 +587,13 @@
         recognition.stop();
         recognition = null;
       }
-      
       isRecording = false;
-      
       if (recordingTimer) {
         clearInterval(recordingTimer);
         recordingTimer = null;
       }
 
-      const btn = document.getElementById('recordBtn');
+      var btn = document.getElementById('recordBtn');
       btn.classList.remove('recording');
       document.getElementById('micIcon').classList.remove('hidden');
       document.getElementById('stopIcon').classList.add('hidden');
@@ -532,15 +605,12 @@
     }
 
     async function generateRecord() {
-      const transcript = document.getElementById('transcript').value.trim();
-      const patientName = document.getElementById('patientName').value.trim();
-      const jobType = document.getElementById('jobType').value;
+      var transcript = document.getElementById('transcript').value.trim();
+      var patientName = document.getElementById('patientName').value.trim();
+      var jobType = document.getElementById('jobType').value;
 
-      if (!transcript || !patientName || !validatePatientName()) {
-        return;
-      }
-
-      if (GAS_URL === 'YOUR_GAS_WEB_APP_URL_HERE') {
+      if (!transcript || !patientName || !validatePatientName()) return;
+      if (!GAS_URL || GAS_URL.includes('YOUR_')) {
         showError('システム設定が完了していません。管理者に連絡してください。');
         return;
       }
@@ -549,7 +619,7 @@
       hideError();
 
       try {
-        const response = await fetch(GAS_URL, {
+        var response = await fetch(GAS_URL, {
           method: 'POST',
           body: JSON.stringify({
             action: 'generate',
@@ -558,8 +628,8 @@
           })
         });
 
-        const text = await response.text();
-        let result;
+        var text = await response.text();
+        var result;
         try {
           result = JSON.parse(text);
         } catch (e) {
@@ -579,10 +649,10 @@
     }
 
     function showReviewStep(record) {
-      const visitDate = document.getElementById('visitDate').value;
-      const patientName = document.getElementById('patientName').value;
-      const jobType = document.getElementById('jobType').value;
-      const recorderName = document.getElementById('recorderName').value;
+      var visitDate = document.getElementById('visitDate').value;
+      var patientName = document.getElementById('patientName').value;
+      var jobType = document.getElementById('jobType').value;
+      var recorderName = document.getElementById('recorderName').value;
 
       document.getElementById('reviewDate').textContent = formatDisplayDate(visitDate);
       document.getElementById('reviewPatient').textContent = patientName;
@@ -596,16 +666,16 @@
     }
 
     async function saveRecord() {
-      const visitDate = document.getElementById('visitDate').value;
-      const patientName = document.getElementById('patientName').value;
-      const jobType = document.getElementById('jobType').value;
-      const recorderName = document.getElementById('recorderName').value;
-      const record = document.getElementById('editableRecord').value;
+      var visitDate = document.getElementById('visitDate').value;
+      var patientName = document.getElementById('patientName').value;
+      var jobType = document.getElementById('jobType').value;
+      var recorderName = document.getElementById('recorderName').value;
+      var record = document.getElementById('editableRecord').value;
 
       showLoading('保存中...');
 
       try {
-        const response = await fetch(GAS_URL, {
+        var response = await fetch(GAS_URL, {
           method: 'POST',
           body: JSON.stringify({
             action: 'save',
@@ -617,8 +687,8 @@
           })
         });
 
-        const text = await response.text();
-        let result;
+        var text = await response.text();
+        var result;
         try {
           result = JSON.parse(text);
         } catch (e) {
@@ -638,11 +708,11 @@
     }
 
     function showSavedStep() {
-      const visitDate = document.getElementById('visitDate').value;
-      const patientName = document.getElementById('patientName').value;
-      const jobType = document.getElementById('jobType').value;
-      const recorderName = document.getElementById('recorderName').value;
-      const record = document.getElementById('editableRecord').value;
+      var visitDate = document.getElementById('visitDate').value;
+      var patientName = document.getElementById('patientName').value;
+      var jobType = document.getElementById('jobType').value;
+      var recorderName = document.getElementById('recorderName').value;
+      var record = document.getElementById('editableRecord').value;
 
       document.getElementById('savedDate').textContent = formatDisplayDate(visitDate);
       document.getElementById('savedPatient').textContent = patientName;
@@ -656,12 +726,12 @@
     }
 
     function formatDisplayDate(dateStr) {
-      const date = new Date(dateStr);
+      var date = new Date(dateStr);
       return date.getFullYear() + '年' + (date.getMonth() + 1) + '月' + date.getDate() + '日';
     }
 
     function copyToClipboard() {
-      const record = document.getElementById('editableRecord').value;
+      var record = document.getElementById('editableRecord').value;
       navigator.clipboard.writeText(record).then(function() {
         showToast('コピーしました');
       });
@@ -680,16 +750,14 @@
       document.getElementById('jobType').value = '';
       document.getElementById('recorderName').innerHTML = '<option value="">先に職種を選択</option>';
       document.getElementById('recorderName').disabled = true;
-      
-      const today = new Date().toISOString().split('T')[0];
+      var today = new Date().toISOString().split('T')[0];
       document.getElementById('visitDate').value = today;
-      
+      hideError();
+      closeSuggestions();
+      updateGenerateButton();
       document.getElementById('step-input').classList.remove('hidden');
       document.getElementById('step-review').classList.add('hidden');
       document.getElementById('step-saved').classList.add('hidden');
-      
-      hideError();
-      updateGenerateButton();
     }
 
     function showLoading(text) {
@@ -702,7 +770,7 @@
     }
 
     function showError(message) {
-      const errorBox = document.getElementById('errorBox');
+      var errorBox = document.getElementById('errorBox');
       errorBox.textContent = message;
       errorBox.classList.remove('hidden');
     }
@@ -712,16 +780,16 @@
     }
 
     function showReviewError(message) {
-      const errorBox = document.getElementById('reviewError');
+      var errorBox = document.getElementById('reviewError');
       errorBox.textContent = message;
       errorBox.classList.remove('hidden');
     }
 
     function showToast(message) {
-      const toast = document.getElementById('toast');
+      var toast = document.getElementById('toast');
       toast.textContent = message;
       toast.classList.remove('hidden');
-      setTimeout(() => toast.classList.add('hidden'), 2000);
+      setTimeout(function() { toast.classList.add('hidden'); }, 2000);
     }
   </script>
 </body>
