@@ -326,6 +326,9 @@
       document.getElementById('jobType').addEventListener('change', onJobTypeChange);
       document.getElementById('recorderName').addEventListener('change', updateGenerateButton);
 
+      var patientHint = document.getElementById('patientNameHint');
+      patientHint.textContent = '利用者リストを読み込み中...';
+
       await Promise.all([loadStaffList(), loadUserList()]);
     });
 
@@ -349,7 +352,10 @@
 
     // 利用者リストを取得
     async function loadUserList() {
-      if (!GAS_URL || GAS_URL.includes('YOUR_')) return;
+      if (!GAS_URL || GAS_URL.includes('YOUR_')) {
+        document.getElementById('patientNameHint').textContent = 'カタカナ・スペースなしで入力';
+        return;
+      }
       try {
         const response = await fetch(GAS_URL, {
           method: 'POST',
@@ -363,16 +369,36 @@
       } catch (err) {
         console.error('利用者リスト取得エラー:', err);
       }
+      userListLoaded = true;
+      // 読み込み完了時に入力済みの値があればサジェストを再評価
+      var currentValue = document.getElementById('patientName').value.trim();
+      if (currentValue) {
+        validatePatientName();
+      }
+      var hint = document.getElementById('patientNameHint');
+      hint.textContent = 'カタカナ・スペースなしで入力';
     }
 
     // オートコンプリート: サジェスト表示
+    function escapeHtml(str) {
+      var div = document.createElement('div');
+      div.appendChild(document.createTextNode(str));
+      return div.innerHTML;
+    }
+
     function showSuggestions(filtered) {
       const list = document.getElementById('patientSuggestions');
       if (filtered.length === 0) { closeSuggestions(); return; }
       suggestionIndex = -1;
-      list.innerHTML = filtered.map(function(name, i) {
-        return '<div class="autocomplete-item" data-index="' + i + '" onmousedown="selectSuggestion(\'' + name + '\')">' + name + '</div>';
-      }).join('');
+      list.innerHTML = '';
+      filtered.forEach(function(name, i) {
+        var div = document.createElement('div');
+        div.className = 'autocomplete-item';
+        div.setAttribute('data-index', i);
+        div.textContent = name;
+        div.onmousedown = function() { selectSuggestion(name); };
+        list.appendChild(div);
+      });
       list.classList.add('open');
     }
 
@@ -603,7 +629,9 @@
       document.getElementById('recordHint').textContent = 'ボタンを押して訪問記録を話してください';
     }
 
+    var isGenerating = false;
     async function generateRecord() {
+      if (isGenerating) return;
       var transcript = document.getElementById('transcript').value.trim();
       var patientName = document.getElementById('patientName').value.trim();
       var jobType = document.getElementById('jobType').value;
@@ -613,6 +641,10 @@
         showError('システム設定が完了していません。管理者に連絡してください。');
         return;
       }
+
+      isGenerating = true;
+      var generateBtn = document.getElementById('generateBtn');
+      if (generateBtn) generateBtn.disabled = true;
 
       showLoading('記録を生成中...');
       hideError();
@@ -637,12 +669,17 @@
         hideLoading();
 
         if (result.success && result.data && result.data.record) {
+          isGenerating = false;
           showReviewStep(result.data.record);
         } else {
+          isGenerating = false;
+          if (generateBtn) generateBtn.disabled = false;
           showError(result.message || '記録の生成に失敗しました');
         }
       } catch (err) {
         hideLoading();
+        isGenerating = false;
+        if (generateBtn) generateBtn.disabled = false;
         showError('通信エラーが発生しました。ネットワークを確認してください。');
       }
     }
@@ -664,14 +701,23 @@
       document.getElementById('step-saved').classList.add('hidden');
     }
 
-    async function saveRecord() {
+    var isSaving = false;
+    var MAX_SAVE_RETRIES = 2;
+
+    async function saveRecord(retryCount) {
+      if (isSaving) return;
+      isSaving = true;
+      retryCount = retryCount || 0;
+      var saveBtn = document.getElementById('saveBtn');
+      if (saveBtn) saveBtn.disabled = true;
+
       var visitDate = document.getElementById('visitDate').value;
       var patientName = document.getElementById('patientName').value;
       var jobType = document.getElementById('jobType').value;
       var recorderName = document.getElementById('recorderName').value;
       var record = document.getElementById('editableRecord').value;
 
-      showLoading('保存中...');
+      showLoading(retryCount > 0 ? '再保存中... (' + retryCount + '/' + MAX_SAVE_RETRIES + ')' : '保存中...');
 
       try {
         var response = await fetch(GAS_URL, {
@@ -686,23 +732,44 @@
           })
         });
 
+        if (!response.ok) {
+          throw new Error('HTTP ' + response.status);
+        }
+
         var text = await response.text();
         var result;
         try {
           result = JSON.parse(text);
         } catch (e) {
-          throw new Error('Invalid response');
+          throw new Error('サーバーからの応答を解析できませんでした');
         }
         hideLoading();
 
         if (result.success) {
           showSavedStep();
+        } else if (retryCount < MAX_SAVE_RETRIES) {
+          // サーバーが保存失敗を返した場合、自動リトライ
+          isSaving = false;
+          await new Promise(function(r) { setTimeout(r, 1000); });
+          saveRecord(retryCount + 1);
+          return;
         } else {
-          showReviewError(result.message || '保存に失敗しました');
+          showReviewError(result.message || '保存に失敗しました。時間をおいて再度お試しください。');
+          isSaving = false;
+          if (saveBtn) saveBtn.disabled = false;
         }
       } catch (err) {
         hideLoading();
-        showReviewError('通信エラーが発生しました');
+        if (retryCount < MAX_SAVE_RETRIES) {
+          // 通信エラーの場合、自動リトライ
+          isSaving = false;
+          await new Promise(function(r) { setTimeout(r, 1000); });
+          saveRecord(retryCount + 1);
+          return;
+        }
+        showReviewError('通信エラーが発生しました。ネットワークを確認し、再度お試しください。');
+        isSaving = false;
+        if (saveBtn) saveBtn.disabled = false;
       }
     }
 
@@ -737,12 +804,19 @@
     }
 
     function goBack() {
+      isSaving = false;
+      var saveBtn = document.getElementById('saveBtn');
+      if (saveBtn) saveBtn.disabled = false;
       document.getElementById('step-input').classList.remove('hidden');
       document.getElementById('step-review').classList.add('hidden');
       document.getElementById('step-saved').classList.add('hidden');
     }
 
     function resetAll() {
+      isSaving = false;
+      isGenerating = false;
+      var saveBtn = document.getElementById('saveBtn');
+      if (saveBtn) saveBtn.disabled = false;
       document.getElementById('patientName').value = '';
       document.getElementById('transcript').value = '';
       document.getElementById('editableRecord').value = '';
