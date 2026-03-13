@@ -313,7 +313,8 @@
     let suggestionIndex = -1;
 
     document.addEventListener('DOMContentLoaded', async function() {
-      const today = new Date().toISOString().split('T')[0];
+      const now = new Date();
+      const today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
       document.getElementById('visitDate').value = today;
 
       const patientInput = document.getElementById('patientName');
@@ -823,7 +824,8 @@
       document.getElementById('jobType').value = '';
       document.getElementById('recorderName').innerHTML = '<option value="">先に職種を選択</option>';
       document.getElementById('recorderName').disabled = true;
-      var today = new Date().toISOString().split('T')[0];
+      var now = new Date();
+      var today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
       document.getElementById('visitDate').value = today;
       hideError();
       closeSuggestions();
